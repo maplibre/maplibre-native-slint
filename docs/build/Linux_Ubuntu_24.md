@@ -39,17 +39,21 @@ rustc --version
 cargo --version
 ```
 
-## Step 3: Build and Install Slint
+## Step 3: Slint Dependencies (Optional)
 
-Slint needs to be built from source and installed system-wide:
+**NEW**: Slint is now automatically downloaded and built by CMake if not found system-wide. You can either:
 
-### Install slint-viewer
+### Option A: Use Automatic Download (Recommended)
+Skip this step - CMake will automatically download and build Slint during project configuration.
+
+### Option B: Install System-wide (For Multiple Projects)
+If you plan to use Slint in multiple projects, install it system-wide:
+
 ```bash
+# Install slint-viewer via cargo
 cargo install slint-viewer
-```
 
-### Build Slint from source
-```bash
+# Build Slint from source
 cd /tmp
 git clone https://github.com/slint-ui/slint.git
 cd slint
@@ -83,12 +87,14 @@ git submodule update --init --recursive
 mkdir build
 cd build
 
-# Configure with CMake
+# Configure with CMake (will auto-download Slint if needed)
 cmake .. -DCMAKE_BUILD_TYPE=Release
 
 # Build the project (use all available cores)
 cmake --build . -j$(nproc)
 ```
+
+**Note**: If you chose Option A above, you'll see a message like "Slint could not be located in the CMake module search path. Downloading it from Git and building it locally" during the cmake configuration step. This is normal and expected.
 
 ## Step 6: Verify the Build
 

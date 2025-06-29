@@ -13,8 +13,8 @@ For detailed build instructions, see the platform-specific guides:
 ## Prerequisites
 
 - C++20 compatible compiler
-- CMake 3.16 or later
-- Rust toolchain (for Slint)
+- CMake 3.21 or later
+- Rust toolchain (for Slint auto-download)
 - OpenGL/GLES development headers
 - Network connectivity for downloading dependencies
 
@@ -27,7 +27,7 @@ git clone https://github.com/yuiseki/maplibre-native-slint.git
 cd maplibre-native-slint
 git submodule update --init --recursive
 
-# Build
+# Build (Slint will be automatically downloaded if needed)
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build .
@@ -35,6 +35,8 @@ cmake --build .
 # Run
 ./maplibre-slint-example
 ```
+
+**Note**: Slint dependencies are now automatically resolved! CMake will download and build Slint if it's not found system-wide.
 
 ## Project Structure
 

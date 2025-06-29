@@ -1,0 +1,34 @@
+import { StandardButton, VerticalBox } from "std-widgets.slint";
+
+export global MapAdapter {
+    in-out property <image> map_texture;
+    callback render_map();
+    callback mouse_press(float, float);
+    callback mouse_release(float, float);
+    callback mouse_move(float, float, bool);
+}
+
+export component MapWindow inherits Window {
+    width: 800px;
+    height: 600px;
+
+    Timer {
+        interval: 16ms;
+        running: true;
+        triggered => {
+            MapAdapter.render_map();
+        }
+    }
+
+    VerticalBox {
+        Image {
+            source: MapAdapter.map_texture;
+            
+            touch := TouchArea {
+                clicked => {
+                    MapAdapter.mouse_press(self.mouse-x / 1px, self.mouse-y / 1px);
+                }
+            }
+        }
+    }
+}

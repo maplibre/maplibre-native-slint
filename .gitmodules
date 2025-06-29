@@ -1,0 +1,6 @@
+[submodule "vendor/maplibre-native"]
+	path = vendor/maplibre-native
+	url = https://github.com/maplibre/maplibre-native.git
+[submodule "vendor/cpr"]
+	path = vendor/cpr
+	url = https://github.com/libcpr/cpr.git

@@ -2,84 +2,39 @@
 
 This project demonstrates the integration of MapLibre Native (C++ mapping library) with Slint UI framework for creating interactive map applications.
 
+## Quick Start
+
+For detailed build instructions, see the platform-specific guides:
+
+- **Linux**: [Ubuntu 24.04 Build Guide](docs/build/Linux_Ubuntu_24.md)
+- **Windows**: [Windows Build Guide](docs/build/Windows.md) *(coming soon)*
+- **macOS**: [macOS Build Guide](docs/build/macOS.md) *(coming soon)*
+
 ## Prerequisites
 
-Before building, ensure you have the following dependencies installed:
+- C++20 compatible compiler
+- CMake 3.16 or later
+- Rust toolchain (for Slint)
+- OpenGL/GLES development headers
+- Network connectivity for downloading dependencies
 
-### System Dependencies
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install -y build-essential cmake git pkg-config
-sudo apt install -y libgl1-mesa-dev libgles2-mesa-dev
-sudo apt install -y libunistring-dev
-sudo apt install -y libicu-dev
-sudo apt install -y libcurl4-openssl-dev
-sudo apt install -y libssl-dev
-```
-
-### Rust (for Slint)
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-```
-
-### Slint Framework
-Slint needs to be built from source and installed system-wide:
+## Basic Build Process
 
 ```bash
-# Install slint-viewer via cargo
-cargo install slint-viewer
-
-# Clone and build Slint from source
-cd /tmp
-git clone https://github.com/slint-ui/slint.git
-cd slint
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
-sudo make install
-sudo ldconfig
-```
-
-## Building the Project
-
-### 1. Clone the Repository
-```bash
+# Install dependencies (see platform guides for details)
+# Clone and prepare
 git clone https://github.com/yuiseki/maplibre-native-slint.git
 cd maplibre-native-slint
-```
-
-### 2. Initialize Submodules
-```bash
 git submodule update --init --recursive
-```
 
-### 3. Create Build Directory
-```bash
-mkdir build
-cd build
-```
-
-### 4. Configure with CMake
-```bash
+# Build
+mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-```
-
-### 5. Build the Project
-```bash
 cmake --build .
+
+# Run
+./maplibre-slint-example
 ```
-
-## Running the Application
-
-After successful build, you can run the example application:
-
-```bash
-./build/maplibre-slint-example
-```
-
-**Note**: This application requires a graphical environment (X11 display). If running on a headless system, you'll need to set up X11 forwarding or use a virtual display.
 
 ## Project Structure
 

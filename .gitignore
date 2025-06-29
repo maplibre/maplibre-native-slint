@@ -16,7 +16,6 @@ compile_commands.json
 *.dll
 
 # IDEs and editors
-.vscode/
 .idea/
 *.suo
 *.ntvs*

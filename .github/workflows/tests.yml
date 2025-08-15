@@ -1,0 +1,249 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          pkg-config \
+          libgl1-mesa-dev \
+          libgles2-mesa-dev \
+          libegl1-mesa-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libxext-dev \
+          xvfb
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+    
+    - name: Cache build dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          build/_deps
+        key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.build_type }}-
+          ${{ runner.os }}-build-
+    
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DBUILD_TESTS=ON
+    
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc)
+    
+    - name: Run tests with Xvfb
+      run: |
+        cd build
+        xvfb-run -a -s "-screen 0 1024x768x24 -ac +extension GLX +render -noreset" \
+          ctest --output-on-failure --parallel $(nproc)
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: test-results-${{ matrix.build_type }}
+        path: |
+          build/Testing/Temporary/LastTest.log
+          build/Testing/Temporary/LastTestsFailed.log
+        retention-days: 5
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          pkg-config \
+          libgl1-mesa-dev \
+          libgles2-mesa-dev \
+          libegl1-mesa-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libxext-dev \
+          xvfb \
+          gcov \
+          lcov
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+    
+    - name: Configure CMake with coverage
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_FLAGS="--coverage" \
+          -DCMAKE_C_FLAGS="--coverage"
+    
+    - name: Build with coverage
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc)
+    
+    - name: Run tests with coverage
+      run: |
+        cd build
+        xvfb-run -a -s "-screen 0 1024x768x24 -ac +extension GLX +render -noreset" \
+          ctest --output-on-failure
+    
+    - name: Generate coverage report
+      run: |
+        cd build
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info \
+          '/usr/*' \
+          '*/vendor/*' \
+          '*/tests/*' \
+          '*/build/_deps/*' \
+          --output-file coverage_filtered.info
+        lcov --list coverage_filtered.info
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/coverage_filtered.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  sanitizers:
+    name: Sanitizer Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    strategy:
+      matrix:
+        sanitizer: [address, undefined, thread]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          pkg-config \
+          libgl1-mesa-dev \
+          libgles2-mesa-dev \
+          libegl1-mesa-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          libxext-dev \
+          xvfb \
+          clang
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+    
+    - name: Configure CMake with sanitizers
+      run: |
+        mkdir -p build
+        cd build
+        
+        SANITIZER_FLAGS=""
+        case "${{ matrix.sanitizer }}" in
+          address)
+            SANITIZER_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+            ;;
+          undefined)
+            SANITIZER_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
+            ;;
+          thread)
+            SANITIZER_FLAGS="-fsanitize=thread -fno-omit-frame-pointer"
+            ;;
+        esac
+        
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_FLAGS="$SANITIZER_FLAGS" \
+          -DCMAKE_C_FLAGS="$SANITIZER_FLAGS"
+    
+    - name: Build with sanitizers
+      run: |
+        cd build
+        cmake --build . --parallel $(nproc)
+    
+    - name: Run tests with sanitizers
+      run: |
+        cd build
+        export TSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
+        export UBSAN_OPTIONS="halt_on_error=1:abort_on_error=1"
+        export ASAN_OPTIONS="halt_on_error=1:abort_on_error=1:detect_leaks=1"
+        
+        xvfb-run -a -s "-screen 0 1024x768x24 -ac +extension GLX +render -noreset" \
+          ctest --output-on-failure --timeout 300

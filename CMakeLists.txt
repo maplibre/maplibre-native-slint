@@ -72,4 +72,9 @@ if (WIN32)
         COMMAND_EXPAND_LISTS)
 endif()
 
+# Add testing support
+option(BUILD_TESTS "Build tests" ON)
 
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

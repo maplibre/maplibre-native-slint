@@ -79,7 +79,7 @@ jobs:
           ctest --output-on-failure --parallel $(nproc)
     
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: test-results-${{ matrix.build_type }}

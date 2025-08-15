@@ -220,10 +220,10 @@ jobs:
             ;;
           undefined)
             SANITIZER_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
-            ;;
+            ;; 
           thread)
             SANITIZER_FLAGS="-fsanitize=thread -fno-omit-frame-pointer"
-            ;;
+            ;; 
         esac
         
         cmake .. \

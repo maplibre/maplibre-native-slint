@@ -38,7 +38,8 @@ jobs:
           libxcursor-dev \
           libxi-dev \
           libxext-dev \
-          xvfb
+          xvfb \
+          libcurl4-openssl-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -117,7 +118,8 @@ jobs:
           libxext-dev \
           xvfb \
           gcc \
-          lcov
+          lcov \
+          libcurl4-openssl-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -152,10 +154,10 @@ jobs:
         cd build
         lcov --capture --directory . --output-file coverage.info
         lcov --remove coverage.info \
-          '/usr/*'
-          '*/vendor/*'
-          '*/tests/*'
-          '*/build/_deps/*'
+          '/usr/*' \
+          '*/vendor/*' \
+          '*/tests/*' \
+          '*/build/_deps/*' \
           --output-file coverage_filtered.info
         lcov --list coverage_filtered.info
     
@@ -199,7 +201,8 @@ jobs:
           libxi-dev \
           libxext-dev \
           xvfb \
-          clang
+          clang \
+          libcurl4-openssl-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1

@@ -39,7 +39,8 @@ jobs:
           libxi-dev \
           libxext-dev \
           xvfb \
-          libcurl4-openssl-dev
+          libcurl4-openssl-dev \
+          libjpeg-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -119,7 +120,8 @@ jobs:
           xvfb \
           gcc \
           lcov \
-          libcurl4-openssl-dev
+          libcurl4-openssl-dev \
+          libjpeg-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -154,10 +156,10 @@ jobs:
         cd build
         lcov --capture --directory . --output-file coverage.info
         lcov --remove coverage.info \
-          '/usr/*' \
-          '*/vendor/*' \
-          '*/tests/*' \
-          '*/build/_deps/*' \
+          '/usr/*'
+          '*/vendor/*'
+          '*/tests/*'
+          '*/build/_deps/*'
           --output-file coverage_filtered.info
         lcov --list coverage_filtered.info
     
@@ -202,7 +204,8 @@ jobs:
           libxext-dev \
           xvfb \
           clang \
-          libcurl4-openssl-dev
+          libcurl4-openssl-dev \
+          libjpeg-dev
     
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1

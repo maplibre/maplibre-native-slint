@@ -116,7 +116,7 @@ jobs:
           libxi-dev \
           libxext-dev \
           xvfb \
-          gcov \
+          gcc \
           lcov
     
     - name: Install Rust toolchain
@@ -152,10 +152,10 @@ jobs:
         cd build
         lcov --capture --directory . --output-file coverage.info
         lcov --remove coverage.info \
-          '/usr/*' \
-          '*/vendor/*' \
-          '*/tests/*' \
-          '*/build/_deps/*' \
+          '/usr/*'
+          '*/vendor/*'
+          '*/tests/*'
+          '*/build/_deps/*'
           --output-file coverage_filtered.info
         lcov --list coverage_filtered.info
     

@@ -8,9 +8,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  build-ci-image:
+    name: Build CI Image
+    runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ steps.get_image_name.outputs.image_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get image name
+        id: get_image_name
+        run: echo "image_name=ghcr.io/${{ github.repository_owner }}/maplibre-native-slint-ci:${{ github.sha }}" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+      - name: Build and push CI image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.get_image_name.outputs.image_name }}
+          target: base
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   test:
     name: Run Tests
+    needs: build-ci-image
     runs-on: ubuntu-latest
+    container: ${{ needs.build-ci-image.outputs.image_name }}
     
     strategy:
       matrix:
@@ -22,39 +53,12 @@ jobs:
       with:
         submodules: recursive
         
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          pkg-config \
-          libgl1-mesa-dev \
-          libgles2-mesa-dev \
-          libegl1-mesa-dev \
-          libx11-dev \
-          libxrandr-dev \
-          libxinerama-dev \
-          libxcursor-dev \
-          libxi-dev \
-          libxext-dev \
-          xvfb \
-          libcurl4-openssl-dev \
-          libjpeg-dev
-    
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-    
     - name: Cache build dependencies
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cargo/registry
-          ~/.cargo/git
+          /root/.cargo/registry
+          /root/.cargo/git
           build/_deps
         key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('**/CMakeLists.txt') }}
         restore-keys: |
@@ -63,6 +67,7 @@ jobs:
     
     - name: Configure CMake
       run: |
+        export PATH="/root/.cargo/bin:${PATH}"
         mkdir -p build
         cd build
         cmake .. \
@@ -92,7 +97,9 @@ jobs:
 
   coverage:
     name: Code Coverage
+    needs: build-ci-image
     runs-on: ubuntu-latest
+    container: ${{ needs.build-ci-image.outputs.image_name }}
     if: github.event_name == 'push'
     
     steps:
@@ -101,37 +108,9 @@ jobs:
       with:
         submodules: recursive
         
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          pkg-config \
-          libgl1-mesa-dev \
-          libgles2-mesa-dev \
-          libegl1-mesa-dev \
-          libx11-dev \
-          libxrandr-dev \
-          libxinerama-dev \
-          libxcursor-dev \
-          libxi-dev \
-          libxext-dev \
-          xvfb \
-          gcc \
-          lcov \
-          libcurl4-openssl-dev \
-          libjpeg-dev
-    
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-    
     - name: Configure CMake with coverage
       run: |
+        export PATH="/root/.cargo/bin:${PATH}"
         mkdir -p build
         cd build
         cmake .. \
@@ -156,10 +135,7 @@ jobs:
         cd build
         lcov --capture --directory . --output-file coverage.info
         lcov --remove coverage.info \
-          '/usr/*'
-          '*/vendor/*'
-          '*/tests/*'
-          '*/build/_deps/*'
+          '/usr/*' '*/vendor/*' '*/tests/*' '*/build/_deps/*'
           --output-file coverage_filtered.info
         lcov --list coverage_filtered.info
     
@@ -173,7 +149,9 @@ jobs:
 
   sanitizers:
     name: Sanitizer Tests
+    needs: build-ci-image
     runs-on: ubuntu-latest
+    container: ${{ needs.build-ci-image.outputs.image_name }}
     if: github.event_name == 'pull_request'
     
     strategy:
@@ -186,36 +164,9 @@ jobs:
       with:
         submodules: recursive
         
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          pkg-config \
-          libgl1-mesa-dev \
-          libgles2-mesa-dev \
-          libegl1-mesa-dev \
-          libx11-dev \
-          libxrandr-dev \
-          libxinerama-dev \
-          libxcursor-dev \
-          libxi-dev \
-          libxext-dev \
-          xvfb \
-          clang \
-          libcurl4-openssl-dev \
-          libjpeg-dev
-    
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-    
     - name: Configure CMake with sanitizers
       run: |
+        export PATH="/root/.cargo/bin:${PATH}"
         mkdir -p build
         cd build
         
@@ -223,13 +174,13 @@ jobs:
         case "${{ matrix.sanitizer }}" in
           address)
             SANITIZER_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
-            ;;
+            ;; 
           undefined)
             SANITIZER_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer"
-            ;;
+            ;; 
           thread)
             SANITIZER_FLAGS="-fsanitize=thread -fno-omit-frame-pointer"
-            ;;
+            ;; 
         esac
         
         cmake .. \

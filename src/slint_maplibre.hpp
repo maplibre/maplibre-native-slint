@@ -1,6 +1,6 @@
 #pragma once
 
-#include <slint/slint.h>
+#include <slint.h>
 #include <mbgl/map/map.hpp>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/storage/resource_options.hpp>

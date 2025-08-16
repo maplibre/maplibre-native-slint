@@ -62,7 +62,7 @@ RUN git submodule update --init --recursive
 
 # Build the project
 RUN cmake -B build -S .
-RUN cmake --build build
+RUN cmake --build build -j$(nproc) --verbose
 
 # Run the tests
 RUN cd build && xvfb-run -a ctest --output-on-failure

@@ -32,7 +32,7 @@ add_executable(simple-unit-tests
 )
 
 # Full unit tests (require OpenGL)
-add_executable(unit-tests
+add_executable(maplibre-unit-tests
     unit/slint_maplibre_test.cpp
     unit/custom_file_source_test.cpp
     unit/custom_run_loop_test.cpp
@@ -44,7 +44,7 @@ target_link_libraries(simple-unit-tests
         maplibre-slint-test
 )
 
-target_link_libraries(unit-tests
+target_link_libraries(maplibre-unit-tests
     PRIVATE
         maplibre-slint-test
 )
@@ -64,7 +64,7 @@ target_link_libraries(integration-tests
 
 # Add test targets
 add_test(NAME simple-unit-tests COMMAND simple-unit-tests)
-add_test(NAME unit-tests COMMAND unit-tests)
+add_test(NAME maplibre-unit-tests COMMAND maplibre-unit-tests)
 add_test(NAME integration-tests COMMAND integration-tests)
 
 # Enable testing

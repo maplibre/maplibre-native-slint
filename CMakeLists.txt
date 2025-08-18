@@ -96,7 +96,23 @@ endif()
 # Find system deps
 find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GLES3 REQUIRED glesv2)
+
+# Check if we're on macOS and handle OpenGL ES differently
+if(APPLE)
+    # On macOS, use OpenGL instead of GLES
+    set(GLES3_FOUND TRUE)
+    set(GLES3_INCLUDE_DIRS "")
+    set(GLES3_LIBRARIES "")
+else()
+    # On other platforms, try to find GLES
+    pkg_check_modules(GLES3 glesv2)
+    if(NOT GLES3_FOUND)
+        message(WARNING "GLES2 not found, falling back to OpenGL")
+        set(GLES3_FOUND TRUE)
+        set(GLES3_INCLUDE_DIRS "")
+        set(GLES3_LIBRARIES "")
+    endif()
+endif()
 
 # Include dirs for this project (Slint::Slint will propagate its own include dirs)
 target_include_directories(maplibre-slint-example

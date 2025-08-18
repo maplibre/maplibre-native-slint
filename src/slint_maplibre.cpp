@@ -7,7 +7,14 @@
 #include "mbgl/util/geo.hpp"
 
 #include <iostream>
+#ifdef __APPLE__
+#ifndef GL_SILENCE_DEPRECATION
+#define GL_SILENCE_DEPRECATION
+#endif
+#include <OpenGL/gl3.h>
+#else
 #include <GLES3/gl3.h>
+#endif
 
 SlintMapLibre::SlintMapLibre() {
     run_loop = std::make_unique<mbgl::CustomRunLoop>();

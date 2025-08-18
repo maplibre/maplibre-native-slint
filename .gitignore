@@ -1,6 +1,7 @@
 # CMake
 !docs/build
 build/
+.cache
 CMakeCache.txt
 CMakeFiles/
 CMakeScripts/

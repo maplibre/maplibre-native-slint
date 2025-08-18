@@ -1,6 +1,18 @@
 {
     "cSpell.words": [
+        "DCMAKE",
+        "ldconfig",
+        "libgl",
+        "libgles",
+        "libicu",
+        "libmaplibre",
+        "libunistring",
         "maplibre",
-        "Slint"
-    ]
+        "modversion",
+        "rustc",
+        "rustup",
+        "Slint",
+        "tlsv"
+    ],
+    "git.ignoreLimitWarning": true
 }

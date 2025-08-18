@@ -30,8 +30,10 @@ Slint requires Rust for compilation. Install Rust using rustup:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
+source "$HOME/.cargo/env"
 ```
+
+**Note**: The `source` command only sets up the environment for the current terminal session. For a permanent setup, add `source "$HOME/.cargo/env"` to your shell's startup file (e.g., `~/.bashrc` or `~/.profile`) and restart your terminal.
 
 Verify the installation:
 ```bash

@@ -1,6 +1,11 @@
 {
     "cSpell.words": [
+        "ASAN",
+        "Buildx",
+        "ctest",
+        "DBUILD",
         "DCMAKE",
+        "fsanitize",
         "ldconfig",
         "libgl",
         "libgles",
@@ -9,10 +14,14 @@
         "libunistring",
         "maplibre",
         "modversion",
+        "noreset",
         "rustc",
         "rustup",
         "Slint",
-        "tlsv"
+        "tlsv",
+        "TSAN",
+        "UBSAN",
+        "unittests"
     ],
     "git.ignoreLimitWarning": true
 }

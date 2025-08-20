@@ -13,7 +13,7 @@ export component MapWindow inherits Window {
     height: 600px;
 
     Timer {
-        interval: 16ms;
+        interval: 200ms;
         running: true;
         triggered => {
             MapAdapter.render_map();

@@ -81,7 +81,6 @@ add_executable(maplibre-slint-example
     examples/main.cpp
     src/slint_maplibre.cpp
     platform/custom_file_source.cpp
-    platform/custom_run_loop.cpp
 )
 
 # Associate .slint files with the target (only if the helper is available)
@@ -99,6 +98,13 @@ find_package(PkgConfig REQUIRED)
 
 # Check if we're on macOS and handle OpenGL ES differently
 if(APPLE)
+    # macOS specific settings
+    set(CMAKE_OSX_ARCHITECTURES "arm64")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
+
+    # Find Metal framework for MapLibre
+    find_library(METAL_FRAMEWORK Metal)
+
     # On macOS, use OpenGL instead of GLES
     set(GLES3_FOUND TRUE)
     set(GLES3_INCLUDE_DIRS "")
@@ -133,6 +139,7 @@ target_link_libraries(maplibre-slint-example
         cpr::cpr
         ${GLES3_LIBRARIES}
         ${OPENGL_LIBRARIES}
+        $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
 )
 
 # On Windows, copy the Slint DLL next to the application binary so that it's found

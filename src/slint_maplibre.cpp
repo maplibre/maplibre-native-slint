@@ -30,7 +30,7 @@ void SlintMapLibre::initialize(int w, int h) {
         *frontend,
         mbgl::MapObserver::nullObserver(),
         mbgl::MapOptions()
-            .withMapMode(mbgl::MapMode::Static) // Use Static mode for image rendering
+            .withMapMode(mbgl::MapMode::Continuous) // Use Continuous mode for interactive rendering
             .withSize(frontend->getSize())
             .withPixelRatio(1.0f),
         resourceOptions);
@@ -43,7 +43,8 @@ slint::Image SlintMapLibre::render_map() {
         return {};
     }
 
-    frontend->render(*map);
+    // In Continuous mode, MapLibre Native handles its own rendering loop.
+    // We just need to read the latest rendered image.
     mbgl::PremultipliedImage rendered_image = frontend->readStillImage();
 
     if (rendered_image.data == nullptr || rendered_image.size.isEmpty()) {

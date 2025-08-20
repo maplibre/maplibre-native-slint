@@ -38,6 +38,12 @@ void SlintMapLibre::initialize(int w, int h) {
     map->getStyle().loadURL("https://demotiles.maplibre.org/style.json");
 }
 
+void SlintMapLibre::setStyleUrl(const std::string& url) {
+    if (map) {
+        map->getStyle().loadURL(url);
+    }
+}
+
 slint::Image SlintMapLibre::render_map() {
     if (!map || !frontend) {
         return {};

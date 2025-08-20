@@ -3,20 +3,29 @@
 
 #include <memory>
 #include <iostream>
+#include <vector>
 
 int main(int argc, char** argv) {
     auto main_window = MapWindow::create();
     auto slint_map_libre = std::make_shared<SlintMapLibre>();
 
-    std::cout << "Initializing MapLibre..." << std::endl;
+    std::vector<slint::SharedString> style_urls_vector = {
+        "https://demotiles.maplibre.org/style.json",
+        "https://tile.openstreetmap.jp/styles/osm-bright/style.json"
+    };
+    auto style_urls_model = std::make_shared<slint::VectorModel<slint::SharedString>>(style_urls_vector);
+    main_window->global<MapAdapter>().set_style_urls(style_urls_model);
+
     slint_map_libre->initialize(800, 600);
-    std::cout << "MapLibre initialized." << std::endl;
 
     // The timer in .slint file will trigger this callback periodically
     main_window->global<MapAdapter>().on_render_map([=]() {
-        std::cout << "Rendering map..." << std::endl;
         auto image = slint_map_libre->render_map();
         main_window->global<MapAdapter>().set_map_texture(image);
+    });
+
+    main_window->global<MapAdapter>().on_style_changed([=](const slint::SharedString& url) {
+        slint_map_libre->setStyleUrl(std::string(url.data(), url.size()));
     });
 
     // Connect mouse events
@@ -32,9 +41,7 @@ int main(int argc, char** argv) {
         slint_map_libre->handle_mouse_move(x, y, pressed);
     });
 
-    std::cout << "Starting Slint event loop..." << std::endl;
     main_window->run();
-    std::cout << "Slint event loop finished." << std::endl;
 
     return 0;
 }

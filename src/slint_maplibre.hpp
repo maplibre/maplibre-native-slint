@@ -9,6 +9,7 @@
 #include "../platform/custom_file_source.hpp"
 
 #include <memory>
+#include <string>
 
 class SlintMapLibre {
 public:
@@ -21,6 +22,7 @@ public:
     void handle_mouse_press(float x, float y);
     void handle_mouse_release(float x, float y);
     void handle_mouse_move(float x, float y, bool pressed);
+    void setStyleUrl(const std::string& url);
 
 private:
     std::unique_ptr<mbgl::Map> map;

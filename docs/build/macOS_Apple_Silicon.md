@@ -28,6 +28,8 @@ Install the required system packages:
 
 ```bash
 brew install cmake pkg-config
+brew install bazelisk webp libuv webp icu4c jpeg-turbo glfw libuv
+brew link icu4c --force
 ```
 
 ## Step 2: Install Rust
@@ -56,7 +58,7 @@ The project is configured to build with the Metal rendering backend.
 
 ```bash
 # Configure with CMake. This will also download and build Slint automatically.
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF .
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode .
 
 # Build the project
 cmake --build build
@@ -66,10 +68,10 @@ The build process can take 10-15 minutes on the first run. Subsequent builds wil
 
 ## Step 5: Run the Application
 
-After a successful build, the executable will be located in the `build` directory.
+After a successful build, the executable will be located in the `build/Debug` directory.
 
 ```bash
-./build/maplibre-slint-example
+./build/Debug/maplibre-slint-example
 ```
 
 This will launch a window displaying the map. You can interact with it using your mouse to pan and zoom.

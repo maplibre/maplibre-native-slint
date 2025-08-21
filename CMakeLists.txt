@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.21)
-project(maplibre-native-slint LANGUAGES CXX)
+project(maplibre-native-slint LANGUAGES C CXX OBJC OBJCXX Swift)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Make FetchContent available early (keep for other fetches if needed)
 include(FetchContent)
+# Explicitly enable Objective-C / ObjC++ / Swift so that Xcode does not treat .m as C
+enable_language(C)
+enable_language(OBJC)
+enable_language(OBJCXX)
+enable_language(Swift)
 
 # Prevent subprojects from enabling their tests (avoid CMP0002 / duplicate test targets)
 # Save top-level BUILD_TESTING (if defined) and force subprojects to not enable tests.
@@ -24,8 +29,27 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests for subprojects" FOR
 # sure about version compatibility. Prefer using the vendored headers inside
 # vendor/maplibre-native to avoid API / duplicate-target conflicts.
 
+# Ensure macOS builds target Apple Silicon only and do so before adding subprojects
+if(APPLE)
+  # Build only arm64 to avoid accidental x86_64 slices from Xcode's default "Standard Architectures"
+  set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "Build architectures for macOS" FORCE)
+  # Match the deployment target used elsewhere, but set early so subprojects inherit it
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3" CACHE STRING "" FORCE)
+  # For Xcode: explicitly exclude x86_64 to prevent multi-arch attempts
+  set(CMAKE_XCODE_ATTRIBUTE_EXCLUDED_ARCHS[sdk=macosx*] "x86_64")
+endif()
+
+# Disable MapLibre Native tests/benches/render-tests in the vendored tree
+set(MLN_WITH_TESTS OFF CACHE BOOL "Disable MapLibre tests" FORCE)
+set(MLN_WITH_RENDER_TESTS OFF CACHE BOOL "Disable MapLibre render tests" FORCE)
+set(MLN_WITH_BENCHMARKS OFF CACHE BOOL "Disable MapLibre benchmarks" FORCE)
+# (Older CMake options used in some revisions; harmless if unknown)
+set(MBGL_WITH_TESTS OFF CACHE BOOL "" FORCE)
+set(MBGL_WITH_RENDER_TESTS OFF CACHE BOOL "" FORCE)
+set(MBGL_WITH_BENCHMARKS OFF CACHE BOOL "" FORCE)
+
 # Add MapLibre (will use vendored dependencies inside vendor/maplibre-native)
-add_subdirectory(vendor/maplibre-native)
+add_subdirectory(vendor/maplibre-native EXCLUDE_FROM_ALL)
 
 # (If you previously saved BUILD_TESTING, restore it now so the rest of your top-level
 # project can enable tests again if you want)

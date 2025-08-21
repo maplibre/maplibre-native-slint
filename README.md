@@ -7,8 +7,8 @@ This project demonstrates the integration of MapLibre Native (C++ mapping librar
 For detailed build instructions, see the platform-specific guides:
 
 - **Linux**: [Ubuntu 24.04 Build Guide](docs/build/Linux_Ubuntu_24.md)
+- **macOS**: [macOS Build Guide](docs/build/macOS_Apple_Silicon.md)
 - **Windows**: [Windows Build Guide](docs/build/Windows.md) *(coming soon)*
-- **macOS**: [macOS Build Guide](docs/build/macOS.md) *(coming soon)*
 
 ## Prerequisites
 

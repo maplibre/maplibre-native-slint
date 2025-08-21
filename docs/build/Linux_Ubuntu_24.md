@@ -90,10 +90,10 @@ mkdir build
 cd build
 
 # Configure with CMake (will auto-download Slint if needed)
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja .
 
 # Build the project (use all available cores)
-cmake --build . -j$(nproc)
+cmake --build build
 ```
 
 **Note**: If you chose Option A above, you'll see a message like "Slint could not be located in the CMake module search path. Downloading it from Git and building it locally" during the cmake configuration step. This is normal and expected.

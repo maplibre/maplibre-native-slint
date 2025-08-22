@@ -89,9 +89,17 @@ This project has been updated to work with the latest MapLibre Native APIs:
 4. Test the build process
 5. Submit a pull request
 
+## Community
+
+- **Slack:** Join the conversation on the [#maplibre-native](https://osmus.slack.com/archives/C01G4G39862) channel on OSM-US Slack. [Click here for an invite](https://slack.openstreetmap.us/).
+- **Website:** [maplibre.org](https://maplibre.org/)
+
 ## License
+
+Copyright (c) 2025 MapLibre contributors.
+
+This project is licensed under the BSD 2-Clause License. See the [LICENSE](LICENSE) file for details.
 
 This project integrates multiple components with different licenses:
 - MapLibre Native: BSD License
 - Slint: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-- Project code: [Your chosen license]

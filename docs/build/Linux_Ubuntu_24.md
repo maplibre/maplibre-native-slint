@@ -85,10 +85,6 @@ git submodule update --init --recursive
 ## Step 5: Build the Project
 
 ```bash
-# Create build directory
-mkdir build
-cd build
-
 # Configure with CMake (will auto-download Slint if needed)
 cmake -B build -DCMAKE_BUILD_TYPE=Release -G Ninja .
 

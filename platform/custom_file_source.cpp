@@ -1,10 +1,9 @@
 #include "custom_file_source.hpp"
 
+#include <atomic>
 #include <cpr/cpr.h>
 #include <mbgl/storage/response.hpp>
 #include <mbgl/util/thread.hpp>
-
-#include <atomic>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -16,7 +15,9 @@ namespace mbgl {
 // Concrete implementation of AsyncRequest that supports cancellation.
 class CancellableRequest : public AsyncRequest {
 public:
-    CancellableRequest() : cancelled(std::make_shared<std::atomic_bool>(false)) {}
+    CancellableRequest()
+        : cancelled(std::make_shared<std::atomic_bool>(false)) {
+    }
     ~CancellableRequest() override {
         cancelled->store(true);
     }
@@ -38,7 +39,8 @@ public:
     void request(const Resource& resource, Callback callback,
                  std::shared_ptr<std::atomic_bool> cancelled) {
         std::lock_guard<std::mutex> lock(threadsMutex);
-        threads.emplace_back([url = resource.url, callback = std::move(callback),
+        threads.emplace_back([url = resource.url,
+                              callback = std::move(callback),
                               cancelled = std::move(cancelled)]() {
             cpr::Response r = cpr::Get(cpr::Url{url});
             Response response;

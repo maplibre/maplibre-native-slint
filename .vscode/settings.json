@@ -34,5 +34,10 @@
         "unittests",
         "unpremult"
     ],
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
+    "C_Cpp.default.cppStandard": "c++20",
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true
 }

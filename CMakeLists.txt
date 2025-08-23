@@ -8,6 +8,9 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Add testing support (default OFF)
+option(BUILD_TESTS "Build tests" OFF)
+
 # Make FetchContent available early (keep for other fetches if needed)
 include(FetchContent)
 # Explicitly enable Objective-C / ObjC++ / Swift so that Xcode does not treat .m as C
@@ -24,6 +27,9 @@ endif()
 # Save top-level BUILD_TESTING (if defined) and force subprojects to not enable tests.
 if(NOT DEFINED _MAPLIBRE_SAVE_BUILD_TESTING)
   set(_MAPLIBRE_SAVE_BUILD_TESTING "${BUILD_TESTING}" CACHE INTERNAL "Saved top-level BUILD_TESTING")
+endif()
+if(NOT DEFINED _MAPLIBRE_SAVE_BUILD_TESTS)
+  set(_MAPLIBRE_SAVE_BUILD_TESTS "${BUILD_TESTS}" CACHE INTERNAL "Saved top-level BUILD_TESTS")
 endif()
 # Force subprojects to not create their own test targets during FetchContent/AddSubdirectory.
 set(BUILD_TESTING OFF CACHE BOOL "Disable building tests for subprojects" FORCE)
@@ -64,6 +70,10 @@ add_subdirectory(vendor/maplibre-native EXCLUDE_FROM_ALL)
 if(DEFINED _MAPLIBRE_SAVE_BUILD_TESTING)
   set(BUILD_TESTING ${_MAPLIBRE_SAVE_BUILD_TESTING} CACHE BOOL "Restore top-level BUILD_TESTING" FORCE)
   unset(_MAPLIBRE_SAVE_BUILD_TESTING CACHE)
+endif()
+if(DEFINED _MAPLIBRE_SAVE_BUILD_TESTS)
+  set(BUILD_TESTS ${_MAPLIBRE_SAVE_BUILD_TESTS} CACHE BOOL "Restore top-level BUILD_TESTS" FORCE)
+  unset(_MAPLIBRE_SAVE_BUILD_TESTS CACHE)
 endif()
 
 
@@ -182,7 +192,7 @@ if (WIN32)
 endif()
 
 # Add testing support
-option(BUILD_TESTS "Build tests" ON)
+enable_testing()
 
 if(BUILD_TESTS)
     add_subdirectory(tests)

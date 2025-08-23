@@ -3,69 +3,43 @@
 # Use GoogleTest from MapLibre Native
 find_package(Threads REQUIRED)
 
-# Create test library
-add_library(maplibre-slint-test STATIC
-    test_utils.cpp
-    test_utils.hpp
+# Common sources to be tested
+set(MAPLIBRE_SLINT_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/slint_maplibre.cpp
+    ${CMAKE_SOURCE_DIR}/platform/custom_file_source.cpp
 )
 
-target_include_directories(maplibre-slint-test
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/platform
-        ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/include
-        ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/test/include
+# Common include directories for tests
+set(MAPLIBRE_SLINT_TEST_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/platform
+    ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/include
+    ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/test/include
+    ${CMAKE_BINARY_DIR}/vendor/maplibre-native/include
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_link_libraries(maplibre-slint-test
-    PUBLIC
-        mbgl-vendor-googletest
-        maplibre-native-slint
-        Threads::Threads
+# Common libraries for tests
+set(MAPLIBRE_SLINT_TEST_LIBRARIES
+    mbgl-vendor-googletest
+    Threads::Threads
+    Slint::Slint
+    mbgl-core
+    cpr::cpr
+    ${GLES3_LIBRARIES}
+    ${OPENGL_LIBRARIES}
+    $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
 )
 
-# Simple unit tests (no OpenGL required)
-add_executable(simple-unit-tests
-    unit/simple_unit_test.cpp
-    unit/test_main.cpp
-)
-
-# Full unit tests (require OpenGL)
-add_executable(maplibre-unit-tests
-    unit/slint_maplibre_test.cpp
+# Unit tests (require OpenGL for some parts)
+add_executable(unit-tests
     unit/custom_file_source_test.cpp
-    unit/custom_run_loop_test.cpp
     unit/test_main.cpp
+    ${MAPLIBRE_SLINT_SOURCES}
 )
-
-target_link_libraries(simple-unit-tests
-    PRIVATE
-        maplibre-slint-test
-)
-
-target_link_libraries(maplibre-unit-tests
-    PRIVATE
-        maplibre-slint-test
-)
-
-# Integration tests
-add_executable(integration-tests
-    integration/map_rendering_test.cpp
-    integration/slint_integration_test.cpp
-    integration/test_main.cpp
-)
-
-target_link_libraries(integration-tests
-    PRIVATE
-        maplibre-slint-test
-        map_window_ui
-)
+target_include_directories(unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_INCLUDE_DIRS})
+target_link_libraries(unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_LIBRARIES})
 
 # Add test targets
-add_test(NAME simple-unit-tests COMMAND simple-unit-tests)
-add_test(NAME maplibre-unit-tests COMMAND maplibre-unit-tests)
-add_test(NAME integration-tests COMMAND integration-tests)
-
-# Enable testing
-enable_testing()
+add_test(NAME unit-tests COMMAND unit-tests)

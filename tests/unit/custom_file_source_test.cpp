@@ -3,8 +3,6 @@
 #include <gtest/gtest.h>
 #include <mbgl/storage/resource.hpp>
 
-#include "../test_utils.hpp"
-
 class CustomFileSourceTest : public ::testing::Test {
 protected:
     void SetUp() override {

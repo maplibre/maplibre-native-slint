@@ -1,19 +1,47 @@
 #include "custom_file_source.hpp"
 
+#include <atomic>
 #include <cpr/cpr.h>
-#include <future>
 #include <mbgl/storage/response.hpp>
 #include <mbgl/util/thread.hpp>
-#include <mbgl/util/timer.hpp>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace mbgl {
+
+// Concrete implementation of AsyncRequest that supports cancellation.
+class CancellableRequest : public AsyncRequest {
+public:
+    CancellableRequest()
+        : cancelled(std::make_shared<std::atomic_bool>(false)) {
+    }
+    ~CancellableRequest() override {
+        cancelled->store(true);
+    }
+    std::shared_ptr<std::atomic_bool> cancelled;
+};
 
 class CustomFileSource::Impl {
 public:
     Impl() = default;
+    ~Impl() {
+        std::lock_guard<std::mutex> lock(threadsMutex);
+        for (auto& thread : threads) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+    }
 
-    void request(const Resource& resource, Callback callback) {
-        auto future = std::async(std::launch::async, [url = resource.url]() {
+    void request(const Resource& resource, Callback callback,
+                 std::shared_ptr<std::atomic_bool> cancelled) {
+        std::lock_guard<std::mutex> lock(threadsMutex);
+        threads.emplace_back([url = resource.url,
+                              callback = std::move(callback),
+                              cancelled = std::move(cancelled)]() {
             cpr::Response r = cpr::Get(cpr::Url{url});
             Response response;
 
@@ -27,14 +55,16 @@ public:
             } else {
                 response.data = std::make_shared<std::string>(r.text);
             }
-            return response;
-        });
 
-        // This is a simplified implementation. A real implementation would
-        // manage the future and avoid blocking. For this example, we'll
-        // just get the result synchronously.
-        callback(future.get());
+            if (!cancelled->load()) {
+                callback(response);
+            }
+        });
     }
+
+private:
+    std::mutex threadsMutex;
+    std::vector<std::thread> threads;
 };
 
 CustomFileSource::CustomFileSource() : impl(std::make_unique<Impl>()) {
@@ -44,13 +74,17 @@ CustomFileSource::~CustomFileSource() = default;
 
 std::unique_ptr<AsyncRequest> CustomFileSource::request(
     const Resource& resource, Callback callback) {
-    impl->request(resource, std::move(callback));
-    // A proper implementation would return a request object that can be
-    // cancelled.
-    return std::make_unique<AsyncRequest>();
+    auto req = std::make_unique<CancellableRequest>();
+    impl->request(resource, std::move(callback), req->cancelled);
+    return req;
 }
 
 bool CustomFileSource::canRequest(const Resource& resource) const {
+    const std::string& url = resource.url;
+    if (url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) {
+        return false;
+    }
+
     return resource.kind == Resource::Kind::Style ||
            resource.kind == Resource::Kind::Source ||
            resource.kind == Resource::Kind::Tile ||

@@ -14,22 +14,22 @@ namespace mbgl {
 
 class CustomFileSource : public FileSource {
 public:
-    CustomFileSource();
-    ~CustomFileSource() override;
+  CustomFileSource();
+  ~CustomFileSource() override;
 
-    std::unique_ptr<AsyncRequest> request(const Resource&, Callback) override;
-    bool canRequest(const Resource&) const override;
-    
-    void setResourceOptions(ResourceOptions options) override;
-    ResourceOptions getResourceOptions() override;
-    void setClientOptions(ClientOptions options) override;
-    ClientOptions getClientOptions() override;
+  std::unique_ptr<AsyncRequest> request(const Resource &, Callback) override;
+  bool canRequest(const Resource &) const override;
+
+  void setResourceOptions(ResourceOptions options) override;
+  ResourceOptions getResourceOptions() override;
+  void setClientOptions(ClientOptions options) override;
+  ClientOptions getClientOptions() override;
 
 private:
-    class Impl;
-    std::unique_ptr<Impl> impl;
-    ResourceOptions resourceOptions;
-    ClientOptions clientOptions;
+  class Impl;
+  std::unique_ptr<Impl> impl;
+  ResourceOptions resourceOptions;
+  ClientOptions clientOptions;
 };
 
 } // namespace mbgl

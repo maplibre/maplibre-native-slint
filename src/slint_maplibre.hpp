@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <memory>
+#include <atomic>
 
 class SlintMapLibre : public mbgl::MapObserver {
 public:
@@ -34,6 +35,12 @@ public:
   void onDidBecomeIdle() override;
   void onDidFailLoadingMap(mbgl::MapLoadError error,
                            const std::string &what) override;
+
+    // MapObserver implementation
+    void onWillStartLoadingMap() override;
+    void onDidFinishLoadingStyle() override;
+    void onDidBecomeIdle() override;
+    void onDidFailLoadingMap(mbgl::MapLoadError error, const std::string& what) override;
 
 private:
   std::unique_ptr<mbgl::Map> map;

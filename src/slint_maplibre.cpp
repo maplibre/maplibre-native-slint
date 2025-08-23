@@ -6,6 +6,7 @@
 #include "mbgl/util/geo.hpp"
 #include "mbgl/util/logging.hpp"
 #include "mbgl/util/premultiply.hpp"
+#include "mbgl/map/camera.hpp"
 
 #include <iostream>
 #include <memory>

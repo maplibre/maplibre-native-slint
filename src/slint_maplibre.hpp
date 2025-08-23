@@ -45,7 +45,7 @@ private:
 
     mbgl::Point<double> last_pos;
 
-    // スタイル読み込み状態管理
+    // Style loading state management
     std::atomic<bool> style_loaded{false};
     std::atomic<bool> map_idle{false};
 };

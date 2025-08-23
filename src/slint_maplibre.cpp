@@ -14,7 +14,7 @@ SlintMapLibre::SlintMapLibre() {
     // Note: The API key is managed through CustomFileSource
     file_source = std::make_unique<mbgl::CustomFileSource>();
 
-    // mbgl-renderと同様にRunLoopを初期化
+    // Initialize RunLoop in the same way as mbgl-render
     run_loop = std::make_unique<mbgl::util::RunLoop>();
 }
 
@@ -24,16 +24,16 @@ void SlintMapLibre::initialize(int w, int h) {
     width = w;
     height = h;
 
-    // mbgl-renderと全く同じパラメータでHeadlessFrontend作成
+    // Create HeadlessFrontend with the exact same parameters as mbgl-render
     frontend = std::make_unique<mbgl::HeadlessFrontend>(
         mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
         1.0f);
 
-    // mbgl-renderと同じResourceOptions設定
+    // Set ResourceOptions same as mbgl-render
     mbgl::ResourceOptions resourceOptions;
     resourceOptions.withCachePath("cache.sqlite").withAssetPath(".");
 
-    // mbgl-renderと同じMapOptions設定
+    // Set MapOptions same as mbgl-render
     map = std::make_unique<mbgl::Map>(
         *frontend,
         *this,  // Use this instance as MapObserver
@@ -44,7 +44,7 @@ void SlintMapLibre::initialize(int w, int h) {
             .withPixelRatio(1.0f),
         resourceOptions);
 
-    // より確実な背景色スタイルを設定
+    // Set a more reliable background color style
     std::cout << "Setting solid background color style..." << std::endl;
     std::string simple_style = R"JSON({
         "version": 8,
@@ -61,15 +61,15 @@ void SlintMapLibre::initialize(int w, int h) {
             }
         ]
     })JSON";
-    // 背景色テストから実際の地図スタイルに切り替え
+    // Switch from background color test to actual map style
     std::cout << "Loading remote MapLibre style..." << std::endl;
     map->getStyle().loadURL("https://demotiles.maplibre.org/style.json");
     // map->getStyle().loadJSON(simple_style);
 
-    // 初期表示位置を設定（東京周辺）
+    // Set initial display position (around Tokyo)
     // std::cout << "Setting initial map position..." << std::endl;
     // map->jumpTo(mbgl::CameraOptions()
-    //     .withCenter(mbgl::LatLng{35.6762, 139.6503}) // 東京
+    //     .withCenter(mbgl::LatLng{35.6762, 139.6503}) // Tokyo
     //    .withZoom(10.0));
 
     std::cout << "Map initialization completed with background color"
@@ -110,15 +110,15 @@ slint::Image SlintMapLibre::render_map() {
         return {};
     }
 
-    // スタイル読み込み完了を待つ
+    // Wait for style to finish loading
     if (!style_loaded.load()) {
         std::cout << "Style not loaded yet, returning empty image" << std::endl;
-        return {};  // 空の画像を返す
+        return {};  // Return an empty image
     }
 
     std::cout << "Style loaded, proceeding with rendering..." << std::endl;
 
-    // mbgl-renderと全く同じレンダリング方法を使用
+    // Use the exact same rendering method as mbgl-render
     std::cout << "Using frontend.render(map) like mbgl-render..." << std::endl;
     auto render_result = frontend->render(*map);
 
@@ -135,7 +135,7 @@ slint::Image SlintMapLibre::render_map() {
         return {};
     }
 
-    // 助言通り：PremultipliedImage を非プリ乗算に変換
+    // As advised: Convert PremultipliedImage to non-premultiplied
     std::cout << "Converting from premultiplied to unpremultiplied..."
               << std::endl;
     mbgl::UnassociatedImage unpremult_image =
@@ -145,13 +145,13 @@ slint::Image SlintMapLibre::render_map() {
     auto pixel_buffer = slint::SharedPixelBuffer<slint::Rgba8Pixel>(
         unpremult_image.size.width, unpremult_image.size.height);
 
-    // 非プリ乗算画像をSlintバッファにコピー
+    // Copy the non-premultiplied image to the Slint buffer
     std::cout << "Copying unpremultiplied pixel data..." << std::endl;
     memcpy(pixel_buffer.begin(), unpremult_image.data.get(),
            unpremult_image.size.width * unpremult_image.size.height *
                sizeof(slint::Rgba8Pixel));
 
-    // デバッグ: ピクセルデータの内容をサンプル調査
+    // Debug: Sample and inspect pixel data content
     const uint8_t* raw_data = unpremult_image.data.get();
     std::cout << "Pixel samples (RGBA): ";
     for (int i = 0;
@@ -165,11 +165,11 @@ slint::Image SlintMapLibre::render_map() {
     }
     std::cout << std::endl;
 
-    // 透明でない（アルファ値が0でない）ピクセルの数をカウント
+    // Count the number of non-transparent (alpha value is not 0) pixels
     int non_transparent_count = 0;
     for (int i = 0;
          i < unpremult_image.size.width * unpremult_image.size.height; i++) {
-        if (raw_data[i * 4 + 3] > 0) {  // アルファチャンネルをチェック
+        if (raw_data[i * 4 + 3] > 0) {  // Check the alpha channel
             non_transparent_count++;
         }
     }

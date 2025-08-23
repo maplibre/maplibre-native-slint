@@ -1,13 +1,15 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
+#include <memory>
+
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_observer.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
 #include <mbgl/util/run_loop.hpp>
-#include <memory>
 #include <slint.h>
 
 #include "../platform/custom_file_source.hpp"
@@ -18,6 +20,7 @@ public:
     ~SlintMapLibre();
 
     void initialize(int width, int height);
+    void setRenderCallback(std::function<void()> callback);
     slint::Image render_map();
     void resize(int width, int height);
     void handle_mouse_press(float x, float y);
@@ -39,6 +42,7 @@ private:
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
     std::unique_ptr<mbgl::CustomFileSource> file_source;
     std::unique_ptr<mbgl::util::RunLoop> run_loop;
+    std::function<void()> m_renderCallback;
 
     int width = 0;
     int height = 0;

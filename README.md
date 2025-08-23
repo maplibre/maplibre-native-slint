@@ -57,10 +57,10 @@ cmake --build build
 
 ## Features
 
-- **OpenGL Integration**: Renders MapLibre Native output to OpenGL textures (In progress)
+- **CPU-based Rendering**: Renders MapLibre Native output to a CPU pixel buffer for integration with Slint.
 - **Slint UI Integration**: Displays maps within Slint user interfaces
 - **Custom File Source**: HTTP-based tile and resource loading
-- **Touch/Mouse Interaction**: Interactive map navigation
+- **Touch/Mouse Interaction**: Interactive map navigation (Partial, in progress)
 - **Cross-platform**: Supports Linux, Windows, and macOS
 
 ## Technical Details
@@ -76,10 +76,19 @@ This project has been updated to work with the latest MapLibre Native APIs:
 
 ### Rendering Pipeline
 
-1. MapLibre Native renders to an OpenGL framebuffer
-2. The framebuffer texture is passed to Slint as a `BorrowedOpenGLTexture`
-3. Slint displays the texture within its UI components
-4. User interactions are forwarded back to MapLibre Native
+The current rendering pipeline is CPU-based:
+
+1. MapLibre Native's `HeadlessFrontend` renders the map to an in-memory pixel buffer (`mbgl::PremultipliedImage`).
+2. This image data is converted from a premultiplied alpha format to a non-premultiplied format.
+3. The pixel data is copied into a `slint::SharedPixelBuffer`.
+4. Slint uses this buffer to render the map image within its UI.
+5. User interactions from the Slint UI are captured and forwarded to the MapLibre Native map instance.
+
+## To Do
+
+- [ ] Implement a more efficient GPU-based rendering pipeline using `BorrowedOpenGLTexture` to avoid CPU-GPU data transfer overhead.
+- [ ] Fully implement and stabilize touch and mouse interactions (zooming, panning, rotation).
+- [ ] Add more examples and improve documentation.
 
 ## Troubleshooting
 

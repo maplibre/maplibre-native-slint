@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "mbgl/gfx/backend_scope.hpp"
+#include "mbgl/map/bound_options.hpp"
 #include "mbgl/map/camera.hpp"
 #include "mbgl/style/style.hpp"
 #include "mbgl/util/geo.hpp"
@@ -43,6 +44,10 @@ void SlintMapLibre::initialize(int w, int h) {
             .withSize(frontend->getSize())
             .withPixelRatio(1.0f),
         resourceOptions);
+
+    // Constrain zoom range
+    map->setBounds(
+        mbgl::BoundOptions().withMinZoom(min_zoom).withMaxZoom(max_zoom));
 
     // Set a more reliable background color style
     std::cout << "Setting solid background color style..." << std::endl;
@@ -209,6 +214,10 @@ void SlintMapLibre::resize(int w, int h) {
 
 void SlintMapLibre::handle_mouse_press(float x, float y) {
     last_pos = {x, y};
+    // Trigger a redraw after interaction starts for responsiveness
+    if (m_renderCallback) {
+        slint::invoke_from_event_loop(m_renderCallback);
+    }
 }
 
 void SlintMapLibre::handle_mouse_release(float x, float y) {
@@ -218,8 +227,45 @@ void SlintMapLibre::handle_mouse_release(float x, float y) {
 void SlintMapLibre::handle_mouse_move(float x, float y, bool pressed) {
     if (pressed) {
         mbgl::Point<double> current_pos = {x, y};
-        map->moveBy(last_pos - current_pos);
+        // Move the map along with the pointer movement (dragging behavior)
+        map->moveBy(current_pos - last_pos);
         last_pos = current_pos;
+        if (m_renderCallback) {
+            slint::invoke_from_event_loop(m_renderCallback);
+        }
+    }
+}
+
+void SlintMapLibre::handle_double_click(float x, float y, bool shift) {
+    if (!map)
+        return;
+    // Center the map on the clicked location and zoom by one level (+/- with
+    // Shift)
+    const mbgl::LatLng ll = map->latLngForPixel(mbgl::ScreenCoordinate{x, y});
+    const auto cam = map->getCameraOptions();
+    const double currentZoom = cam.zoom.value_or(0.0);
+    const double delta = shift ? -1.0 : 1.0;
+    const double targetZoom =
+        std::min(max_zoom, std::max(min_zoom, currentZoom + delta));
+
+    mbgl::CameraOptions next;
+    next.withCenter(std::optional<mbgl::LatLng>(ll));
+    next.withZoom(std::optional<double>(targetZoom));
+    map->jumpTo(next);
+    if (m_renderCallback) {
+        slint::invoke_from_event_loop(m_renderCallback);
+    }
+}
+
+void SlintMapLibre::handle_wheel_zoom(float x, float y, float dy) {
+    if (!map)
+        return;
+    // Lower sensitivity: dy < 0 => zoom in, dy > 0 => zoom out
+    constexpr double step = 1.2;  // smoother than 2.0
+    double scale = (dy < 0.0) ? step : (1.0 / step);
+    map->scaleBy(scale, mbgl::ScreenCoordinate{x, y});
+    if (m_renderCallback) {
+        slint::invoke_from_event_loop(m_renderCallback);
     }
 }
 

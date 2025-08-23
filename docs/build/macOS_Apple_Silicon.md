@@ -27,7 +27,7 @@ Install Homebrew if not already installed:
 Install the required system packages:
 
 ```bash
-brew install cmake pkg-config
+brew install cmake pkg-config clang-format
 brew install bazelisk webp libuv webp icu4c jpeg-turbo glfw
 brew link icu4c --force
 ```

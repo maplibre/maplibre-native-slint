@@ -32,25 +32,14 @@ set(MAPLIBRE_SLINT_TEST_LIBRARIES
     $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
 )
 
-# Simple unit tests (no OpenGL required)
-add_executable(simple-unit-tests
-    unit/simple_unit_test.cpp
-    unit/test_main.cpp
-    ${MAPLIBRE_SLINT_SOURCES}
-)
-target_include_directories(simple-unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_INCLUDE_DIRS})
-target_link_libraries(simple-unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_LIBRARIES})
-
-# Full unit tests (require OpenGL)
-add_executable(maplibre-unit-tests
+# Unit tests (require OpenGL for some parts)
+add_executable(unit-tests
     unit/custom_file_source_test.cpp
-    unit/simple_unit_test.cpp
     unit/test_main.cpp
     ${MAPLIBRE_SLINT_SOURCES}
 )
-target_include_directories(maplibre-unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_INCLUDE_DIRS})
-target_link_libraries(maplibre-unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_LIBRARIES})
+target_include_directories(unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_INCLUDE_DIRS})
+target_link_libraries(unit-tests PRIVATE ${MAPLIBRE_SLINT_TEST_LIBRARIES})
 
 # Add test targets
-add_test(NAME simple-unit-tests COMMAND simple-unit-tests)
-add_test(NAME maplibre-unit-tests COMMAND maplibre-unit-tests)
+add_test(NAME unit-tests COMMAND unit-tests)

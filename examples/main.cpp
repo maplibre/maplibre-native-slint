@@ -1,9 +1,9 @@
-#include "slint_maplibre.hpp"
-#include "map_window.h"
-
-#include <memory>
 #include <iostream>
 #include <vector>
+#include <memory>
+
+#include "map_window.h"
+#include "slint_maplibre.hpp"
 
 int main(int argc, char** argv) {
     auto main_window = MapWindow::create();
@@ -29,17 +29,16 @@ int main(int argc, char** argv) {
     });
 
     // Connect mouse events
-    main_window->global<MapAdapter>().on_mouse_press([=](float x, float y) {
-        slint_map_libre->handle_mouse_press(x, y);
-    });
+    main_window->global<MapAdapter>().on_mouse_press(
+        [=](float x, float y) { slint_map_libre->handle_mouse_press(x, y); });
 
-    main_window->global<MapAdapter>().on_mouse_release([=](float x, float y) {
-        slint_map_libre->handle_mouse_release(x, y);
-    });
+    main_window->global<MapAdapter>().on_mouse_release(
+        [=](float x, float y) { slint_map_libre->handle_mouse_release(x, y); });
 
-    main_window->global<MapAdapter>().on_mouse_move([=](float x, float y, bool pressed) {
-        slint_map_libre->handle_mouse_move(x, y, pressed);
-    });
+    main_window->global<MapAdapter>().on_mouse_move(
+        [=](float x, float y, bool pressed) {
+            slint_map_libre->handle_mouse_move(x, y, pressed);
+        });
 
     main_window->run();
 

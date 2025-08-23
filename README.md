@@ -7,8 +7,18 @@ This project demonstrates the integration of MapLibre Native (C++ mapping librar
 For detailed build instructions, see the platform-specific guides:
 
 - **Linux**: [Ubuntu 24.04 Build Guide](docs/build/Linux_Ubuntu_24.md)
-- **Windows**: [Windows Build Guide](docs/build/Windows.md) *(coming soon)*
-- **macOS**: [macOS Build Guide](docs/build/macOS.md) *(coming soon)*
+- **macOS**: [macOS Build Guide](docs/build/macOS_Apple_Silicon.md)
+- **Windows**: [Windows Build Guide](docs/build/Windows.md) _(coming soon)_
+
+## Screenshots
+
+### Linux desktop
+
+[![Image from Gyazo](https://i.gyazo.com/b2b0b9e0af3a2e8f7342d3db6b3c899f.png)](https://gyazo.com/b2b0b9e0af3a2e8f7342d3db6b3c899f)
+
+### macOS Apple Silicon
+
+[![Image from Gyazo](https://i.gyazo.com/d9506d8ed7d5d30a921624bd7a893c88.jpg)](https://gyazo.com/d9506d8ed7d5d30a921624bd7a893c88)
 
 ## Prerequisites
 
@@ -28,9 +38,8 @@ cd maplibre-native-slint
 git submodule update --init --recursive
 
 # Build (Slint will be automatically downloaded if needed)
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build .
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 
 # Run
 ./maplibre-slint-example
@@ -48,35 +57,49 @@ cmake --build .
 
 ## Features
 
-- **OpenGL Integration**: Renders MapLibre Native output to OpenGL textures
+- **CPU-based Rendering**: Renders MapLibre Native output to a CPU pixel buffer for integration with Slint.
 - **Slint UI Integration**: Displays maps within Slint user interfaces
 - **Custom File Source**: HTTP-based tile and resource loading
-- **Touch/Mouse Interaction**: Interactive map navigation
+- **Touch/Mouse Interaction**: Interactive map navigation (Partial, in progress)
 - **Cross-platform**: Supports Linux, Windows, and macOS
 
 ## Technical Details
 
 ### API Compatibility
+
 This project has been updated to work with the latest MapLibre Native APIs:
+
 - Modern RunLoop API using composition instead of inheritance
 - Updated ResourceOptions without deprecated methods
 - Current HeadlessFrontend construction patterns
 - Proper OpenGL context management
 
 ### Rendering Pipeline
-1. MapLibre Native renders to an OpenGL framebuffer
-2. The framebuffer texture is passed to Slint as a `BorrowedOpenGLTexture`
-3. Slint displays the texture within its UI components
-4. User interactions are forwarded back to MapLibre Native
+
+The current rendering pipeline is CPU-based:
+
+1. MapLibre Native's `HeadlessFrontend` renders the map to an in-memory pixel buffer (`mbgl::PremultipliedImage`).
+2. This image data is converted from a premultiplied alpha format to a non-premultiplied format.
+3. The pixel data is copied into a `slint::SharedPixelBuffer`.
+4. Slint uses this buffer to render the map image within its UI.
+5. User interactions from the Slint UI are captured and forwarded to the MapLibre Native map instance.
+
+## To Do
+
+- [ ] Implement a more efficient GPU-based rendering pipeline using `BorrowedOpenGLTexture` to avoid CPU-GPU data transfer overhead.
+- [ ] Fully implement and stabilize touch and mouse interactions (zooming, panning, rotation).
+- [ ] Add more examples and improve documentation.
 
 ## Troubleshooting
 
 ### Build Issues
+
 - Ensure all dependencies are installed
 - Check that Slint is properly installed system-wide
 - Verify OpenGL/GLES development headers are available
 
 ### Runtime Issues
+
 - For headless environments, set up X11 forwarding or virtual display
 - Check that OpenGL drivers are properly installed
 - Verify network connectivity for map tile loading
@@ -89,9 +112,18 @@ This project has been updated to work with the latest MapLibre Native APIs:
 4. Test the build process
 5. Submit a pull request
 
+## Community
+
+- **Slack:** Join the conversation on the [#maplibre-native](https://osmus.slack.com/archives/C01G4G39862) channel on OSM-US Slack. [Click here for an invite](https://slack.openstreetmap.us/).
+- **Website:** [maplibre.org](https://maplibre.org/)
+
 ## License
 
+Copyright (c) 2025 MapLibre contributors.
+
+This project is licensed under the BSD 2-Clause License. See the [LICENSE](LICENSE) file for details.
+
 This project integrates multiple components with different licenses:
+
 - MapLibre Native: BSD License
 - Slint: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-- Project code: [Your chosen license]

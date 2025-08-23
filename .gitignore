@@ -28,3 +28,5 @@ compile_commands.json
 # Other
 vendor/
 *.log
+
+cache.sqlite

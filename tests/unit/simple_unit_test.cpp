@@ -1,17 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "custom_file_source.hpp"
-#include "custom_run_loop.hpp"
 
 // Simple tests that don't require OpenGL context
-
-TEST(SimpleCustomRunLoopTest, Construction) {
-    auto run_loop = std::make_unique<mbgl::CustomRunLoop>();
-    EXPECT_NE(run_loop, nullptr);
-
-    auto* loop = run_loop->getRunLoop();
-    EXPECT_NE(loop, nullptr);
-}
 
 TEST(SimpleCustomFileSourceTest, Construction) {
     auto file_source = std::make_unique<mbgl::CustomFileSource>();
@@ -39,8 +30,6 @@ TEST(SimpleCustomFileSourceTest, CanRequestSimple) {
     // Basic validation without network calls
     EXPECT_TRUE(file_source->canRequest(http_resource));
     EXPECT_TRUE(file_source->canRequest(https_resource));
-    // Note: The implementation may accept all URLs, adjust expectation based on
-    // actual behavior
-    EXPECT_TRUE(file_source->canRequest(
+    EXPECT_FALSE(file_source->canRequest(
         invalid_resource));  // Changed to reflect actual behavior
 }

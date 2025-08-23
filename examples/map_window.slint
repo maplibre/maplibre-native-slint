@@ -2,7 +2,6 @@ import { StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
 
 export global MapAdapter {
     in-out property <image> map_texture;
-    in-out property <[string]> style_urls;
     callback render_map();
     callback mouse_press(float, float);
     callback mouse_release(float, float);
@@ -14,6 +13,11 @@ export component MapWindow inherits Window {
     width: 800px;
     height: 600px;
 
+    property <[string]> style_urls: [
+        "https://demotiles.maplibre.org/style.json",
+        "https://tile.openstreetmap.jp/styles/osm-bright/style.json"
+    ];
+
     Timer {
         interval: 200ms;
         running: true;
@@ -24,7 +28,7 @@ export component MapWindow inherits Window {
 
     VerticalBox {
         ComboBox {
-            model: MapAdapter.style_urls;
+            model: root.style_urls;
             selected(url) => {
                 MapAdapter.style_changed(url);
             }

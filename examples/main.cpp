@@ -9,14 +9,6 @@ int main(int argc, char** argv) {
     auto main_window = MapWindow::create();
     auto slint_map_libre = std::make_shared<SlintMapLibre>();
 
-    std::vector<slint::SharedString> style_urls_vector = {
-        "https://demotiles.maplibre.org/style.json",
-        "https://tile.openstreetmap.jp/styles/osm-bright/style.json"};
-    auto style_urls_model =
-        std::make_shared<slint::VectorModel<slint::SharedString>>(
-            style_urls_vector);
-    main_window->global<MapAdapter>().set_style_urls(style_urls_model);
-
     slint_map_libre->initialize(800, 600);
 
     // Create a lambda for rendering logic

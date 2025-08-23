@@ -1,6 +1,6 @@
 # MapLibre Native + Slint Integration
 
-This project demonstrates the integration of MapLibre Native (C++ mapping library) with Slint UI framework for creating interactive map applications.
+This project demonstrates the integration of [MapLibre Native](https://github.com/maplibre/maplibre-native) (C++ mapping library) with Slint UI framework for creating interactive map applications.
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ For detailed build instructions, see the platform-specific guides:
 ```bash
 # Install dependencies (see platform guides for details)
 # Clone and prepare
-git clone https://github.com/yuiseki/maplibre-native-slint.git
+git clone https://github.com/maplibre/maplibre-native-slint.git
 cd maplibre-native-slint
 git submodule update --init --recursive
 

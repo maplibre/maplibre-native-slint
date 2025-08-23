@@ -10,11 +10,9 @@
 #include <mbgl/util/run_loop.hpp>
 #include <memory>
 #include <slint.h>
+#include <string>
 
 #include "../platform/custom_file_source.hpp"
-
-#include <memory>
-#include <string>
 
 class SlintMapLibre : public mbgl::MapObserver {
 public:

@@ -34,13 +34,6 @@ public:
     void onDidFailLoadingMap(mbgl::MapLoadError error,
                              const std::string& what) override;
 
-    // MapObserver implementation
-    void onWillStartLoadingMap() override;
-    void onDidFinishLoadingStyle() override;
-    void onDidBecomeIdle() override;
-    void onDidFailLoadingMap(mbgl::MapLoadError error,
-                             const std::string& what) override;
-
 private:
     std::unique_ptr<mbgl::Map> map;
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;

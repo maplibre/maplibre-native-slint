@@ -15,6 +15,6 @@ jobs:
     - name: Check format
       uses: DoozyX/clang-format-lint-action@v0.17
       with:
-        source: ['./src', './tests', './platform', './examples']
+        source: "./src ./tests ./platform ./examples"
         extensions: 'h,hpp,cpp'
         clangFormatVersion: 17

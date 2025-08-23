@@ -76,6 +76,10 @@ void SlintMapLibre::initialize(int w, int h) {
               << std::endl;
 }
 
+void SlintMapLibre::setRenderCallback(std::function<void()> callback) {
+    m_renderCallback = std::move(callback);
+}
+
 // MapObserver implementation
 void SlintMapLibre::onWillStartLoadingMap() {
     std::cout << "[MapObserver] Will start loading map" << std::endl;
@@ -86,6 +90,10 @@ void SlintMapLibre::onWillStartLoadingMap() {
 void SlintMapLibre::onDidFinishLoadingStyle() {
     std::cout << "[MapObserver] Did finish loading style" << std::endl;
     style_loaded = true;
+    if (m_renderCallback) {
+        // Schedule a redraw on the event loop
+        slint::invoke_from_event_loop(m_renderCallback);
+    }
 }
 
 void SlintMapLibre::onDidBecomeIdle() {

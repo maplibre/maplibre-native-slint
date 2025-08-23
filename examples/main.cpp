@@ -18,11 +18,20 @@ int main(int argc, char** argv) {
 
     slint_map_libre->initialize(800, 600);
 
-    // The timer in .slint file will trigger this callback periodically
-    main_window->global<MapAdapter>().on_render_map([=]() {
+    // Create a lambda for rendering logic
+    auto render_function = [=]() {
+        slint_map_libre->run_map_loop();  // Drive the MapLibre event loop
+        std::cout << "Rendering map..." << std::endl;
         auto image = slint_map_libre->render_map();
         main_window->global<MapAdapter>().set_map_texture(image);
-    });
+    };
+
+    // Set the callback for asynchronous rendering requests from MapLibre
+    slint_map_libre->setRenderCallback(render_function);
+
+    // The timer in .slint file will trigger this callback periodically for
+    // continuous rendering
+    main_window->global<MapAdapter>().on_render_map(render_function);
 
     main_window->global<MapAdapter>().on_style_changed([=](const slint::SharedString& url) {
         slint_map_libre->setStyleUrl(std::string(url.data(), url.size()));

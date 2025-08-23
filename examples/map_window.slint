@@ -1,5 +1,11 @@
 import { StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
 
+// Define a struct to hold window size
+export struct Size {
+    width: length,
+    height: length,
+}
+
 export global MapAdapter {
     in-out property <image> map_texture;
     callback render_map();
@@ -10,8 +16,18 @@ export global MapAdapter {
 }
 
 export component MapWindow inherits Window {
-    width: 800px;
-    height: 600px;
+    // Default window size
+    preferred-width: 800px;
+    preferred-height: 600px;
+
+    // Expose window size via Size-typed property
+    out property<Size> window-size: { width: root.width, height: root.height };
+
+    // Callback when the window size changes
+    callback window-size-changed;
+
+    // Invoke callback when window-size changes
+    changed window-size => { window-size-changed(); }
 
     property <[string]> style_urls: [
         "https://demotiles.maplibre.org/style.json",

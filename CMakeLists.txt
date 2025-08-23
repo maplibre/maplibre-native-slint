@@ -36,7 +36,7 @@ set(BUILD_TESTING OFF CACHE BOOL "Disable building tests for subprojects" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests for subprojects" FORCE)
 set(ENABLE_TESTING OFF CACHE BOOL "Disable building tests for subprojects" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests for subprojects" FORCE)
-# (その他、サブプロジェクトが使いそうなフラグをここで OFF にしておく)
+# (Also turn OFF other flags that subprojects might enable here)
 
 # --- IMPORTANT ---
 # Do NOT FetchContent mapbox/geometry or mapbox/variant here unless you are absolutely

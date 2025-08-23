@@ -56,7 +56,7 @@ The project is configured to build with the Metal rendering backend.
 
 ```bash
 # Configure with CMake. This will also download and build Slint automatically.
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF .
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode .
 
 # Build the project
 cmake --build build

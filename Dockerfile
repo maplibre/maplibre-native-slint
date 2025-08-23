@@ -7,9 +7,11 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install all dependencies from all jobs (test, coverage, sanitizers)
 RUN apt-get update && apt-get install -y \
     build-essential \
+    ccache \
     cmake \
     curl \
     pkg-config \
+
     git \
     # For OpenGL headless rendering
     libgl1-mesa-dev \

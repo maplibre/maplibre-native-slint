@@ -28,7 +28,7 @@ Install the required system packages:
 
 ```bash
 brew install cmake pkg-config
-brew install bazelisk webp libuv webp icu4c jpeg-turbo glfw libuv
+brew install bazelisk webp libuv webp icu4c jpeg-turbo glfw
 brew link icu4c --force
 ```
 

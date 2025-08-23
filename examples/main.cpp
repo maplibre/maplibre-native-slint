@@ -47,12 +47,24 @@ int main(int argc, char** argv) {
             slint_map_libre->handle_mouse_move(x, y, pressed);
         });
 
-    // Initialize/resize MapLibre when the window size changes
-    main_window->on_window_size_changed([=]() {
-        const auto s = main_window->get_window_size();
+    // Double click zoom with Shift for zoom-out
+    main_window->global<MapAdapter>().on_double_click_with_shift(
+        [=](float x, float y, bool shift) {
+            slint_map_libre->handle_double_click(x, y, shift);
+        });
+
+    // Wheel zoom
+    main_window->global<MapAdapter>().on_wheel_zoom(
+        [=](float x, float y, float dy) {
+            slint_map_libre->handle_wheel_zoom(x, y, dy);
+        });
+
+    // Initialize/resize MapLibre to match the map image area
+    main_window->on_map_size_changed([=]() {
+        const auto s = main_window->get_map_size();
         const int w = static_cast<int>(s.width);
         const int h = static_cast<int>(s.height);
-        std::cout << "Window Size Changed: " << w << "x" << h << std::endl;
+        std::cout << "Map Area Size Changed: " << w << "x" << h << std::endl;
         if (w > 0 && h > 0) {
             if (!*initialized) {
                 slint_map_libre->initialize(w, h);

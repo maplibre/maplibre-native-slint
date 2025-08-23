@@ -13,6 +13,8 @@ export global MapAdapter {
     callback mouse_release(float, float);
     callback mouse_move(float, float, bool);
     callback style_changed(string);
+    callback double_click_with_shift(float, float, bool);
+    callback wheel_zoom(float, float, float);
 }
 
 export component MapWindow inherits Window {
@@ -28,6 +30,11 @@ export component MapWindow inherits Window {
 
     // Invoke callback when window-size changes
     changed window-size => { window-size-changed(); }
+
+    // Expose map image area size so backend can match framebuffer size
+    out property<Size> map-size: { width: map.width, height: map.height };
+    callback map-size-changed;
+    changed map-size => { map-size-changed(); }
 
     property <[string]> style_urls: [
         "https://demotiles.maplibre.org/style.json",
@@ -49,12 +56,59 @@ export component MapWindow inherits Window {
                 MapAdapter.style_changed(url);
             }
         }
-        Image {
+        map := Image {
             source: MapAdapter.map_texture;
-            
+
             touch := TouchArea {
-                clicked => {
-                    MapAdapter.mouse_press(self.mouse-x / 1px, self.mouse-y / 1px);
+                // Keep internal dragging state to control cursor explicitly
+                property <bool> dragging: false;
+                // Start drag only after a small threshold to avoid accidental map moves
+                property <length> drag-threshold: 4px;
+                // Track last seen Shift modifier state from pointer events
+                property <bool> last-shift: false;
+                mouse-cursor: self.dragging ? grabbing : grab;
+
+                // Handle press/drag via moved + internal state
+                moved => {
+                    // Only engage dragging after pointer moved beyond threshold from press point
+                    if (!self.dragging && self.pressed) {
+                        if ( (self.mouse-x - self.pressed-x >= self.drag-threshold)
+                             || (self.pressed-x - self.mouse-x >= self.drag-threshold)
+                             || (self.mouse-y - self.pressed-y >= self.drag-threshold)
+                             || (self.pressed-y - self.mouse-y >= self.drag-threshold) ) {
+                            self.dragging = true;
+                            // Initialize drag at current position to avoid initial jump
+                            MapAdapter.mouse_press(self.mouse-x / 1px, self.mouse-y / 1px);
+                        }
+                    }
+                    if (self.dragging && self.pressed) {
+                        MapAdapter.mouse_move(self.mouse-x / 1px, self.mouse-y / 1px, true);
+                    }
+                    if (self.dragging && !self.pressed) {
+                        MapAdapter.mouse_release(self.mouse-x / 1px, self.mouse-y / 1px);
+                        self.dragging = false;
+                    }
+                }
+
+                // Track modifiers from pointer events so we can use them in double-clicked
+                pointer-event(e) => {
+                    self.last-shift = e.modifiers.shift;
+                }
+
+                // Double-click to zoom in (backend handles clamping)
+                double-clicked => {
+                    MapAdapter.double_click_with_shift(self.mouse-x / 1px,
+                                                       self.mouse-y / 1px,
+                                                       self.last-shift);
+                }
+
+                // Mouse-wheel / trackpad scroll to zoom
+                scroll-event(event) => {
+                    // Positive delta_y: zoom out; Negative: zoom in
+                    MapAdapter.wheel_zoom(self.mouse-x / 1px,
+                                           self.mouse-y / 1px,
+                                           event.delta_y / 1px);
+                    return accept;
                 }
             }
         }

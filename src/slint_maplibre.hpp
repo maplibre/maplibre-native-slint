@@ -26,6 +26,8 @@ public:
     void handle_mouse_press(float x, float y);
     void handle_mouse_release(float x, float y);
     void handle_mouse_move(float x, float y, bool pressed);
+    void handle_double_click(float x, float y, bool shift);
+    void handle_wheel_zoom(float x, float y, float dy);
     void setStyleUrl(const std::string& url);
 
     // Manually drive the map's run loop
@@ -49,6 +51,8 @@ private:
     int height = 0;
 
     mbgl::Point<double> last_pos;
+    double min_zoom = 0.0;
+    double max_zoom = 22.0;
 
     // Style loading state management
     std::atomic<bool> style_loaded{false};

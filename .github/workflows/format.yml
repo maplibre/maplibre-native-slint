@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - name: Check format
-      uses: DoozyX/clang-format-lint-action@v0.17
+      uses: DoozyX/clang-format-lint-action@v0.20
       with:
         source: "./src ./tests ./platform ./examples"
         extensions: 'h,hpp,cpp'

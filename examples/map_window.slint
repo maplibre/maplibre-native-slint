@@ -1,11 +1,13 @@
-import { StandardButton, VerticalBox } from "std-widgets.slint";
+import { StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
 
 export global MapAdapter {
     in-out property <image> map_texture;
+    in-out property <[string]> style_urls;
     callback render_map();
     callback mouse_press(float, float);
     callback mouse_release(float, float);
     callback mouse_move(float, float, bool);
+    callback style_changed(string);
 }
 
 export component MapWindow inherits Window {
@@ -21,6 +23,12 @@ export component MapWindow inherits Window {
     }
 
     VerticalBox {
+        ComboBox {
+            model: MapAdapter.style_urls;
+            selected(url) => {
+                MapAdapter.style_changed(url);
+            }
+        }
         Image {
             source: MapAdapter.map_texture;
             

@@ -110,6 +110,12 @@ void SlintMapLibre::onDidFailLoadingMap(mbgl::MapLoadError error,
     std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
 }
 
+void SlintMapLibre::setStyleUrl(const std::string& url) {
+    if (map) {
+        map->getStyle().loadURL(url);
+    }
+}
+
 slint::Image SlintMapLibre::render_map() {
     std::cout << "render_map() called" << std::endl;
 

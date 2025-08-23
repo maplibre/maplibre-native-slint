@@ -10,6 +10,7 @@
 #include <mbgl/util/run_loop.hpp>
 #include <memory>
 #include <slint.h>
+#include <string>
 
 #include "../platform/custom_file_source.hpp"
 
@@ -25,6 +26,7 @@ public:
     void handle_mouse_press(float x, float y);
     void handle_mouse_release(float x, float y);
     void handle_mouse_move(float x, float y, bool pressed);
+    void setStyleUrl(const std::string& url);
 
     // Manually drive the map's run loop
     void run_map_loop();

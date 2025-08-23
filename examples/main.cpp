@@ -9,7 +9,11 @@ int main(int argc, char** argv) {
     auto main_window = MapWindow::create();
     auto slint_map_libre = std::make_shared<SlintMapLibre>();
 
-    slint_map_libre->initialize(800, 600);
+    // Delay initialization until a non-zero window size is known
+    auto initialized = std::make_shared<bool>(false);
+    const auto size = main_window->get_window_size();
+    std::cout << "Initial Window Size: " << static_cast<int>(size.width) << "x"
+              << static_cast<int>(size.height) << std::endl;
 
     // Create a lambda for rendering logic
     auto render_function = [=]() {
@@ -42,6 +46,22 @@ int main(int argc, char** argv) {
         [=](float x, float y, bool pressed) {
             slint_map_libre->handle_mouse_move(x, y, pressed);
         });
+
+    // Initialize/resize MapLibre when the window size changes
+    main_window->on_window_size_changed([=]() {
+        const auto s = main_window->get_window_size();
+        const int w = static_cast<int>(s.width);
+        const int h = static_cast<int>(s.height);
+        std::cout << "Window Size Changed: " << w << "x" << h << std::endl;
+        if (w > 0 && h > 0) {
+            if (!*initialized) {
+                slint_map_libre->initialize(w, h);
+                *initialized = true;
+            } else {
+                slint_map_libre->resize(w, h);
+            }
+        }
+    });
 
     main_window->run();
 

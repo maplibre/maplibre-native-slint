@@ -23,7 +23,8 @@ int main(int argc, char** argv) {
     // Set the callback for asynchronous rendering requests from MapLibre
     slint_map_libre->setRenderCallback(render_function);
 
-    // The timer in .slint file will trigger this callback periodically for continuous rendering
+    // The timer in .slint file will trigger this callback periodically for
+    // continuous rendering
     main_window->global<MapAdapter>().on_render_map(render_function);
 
     // Connect mouse events

@@ -2,14 +2,13 @@
 
 #include <atomic>
 #include <functional>
-#include <memory>
-
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_observer.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
 #include <mbgl/util/run_loop.hpp>
+#include <memory>
 #include <slint.h>
 
 #include "../platform/custom_file_source.hpp"

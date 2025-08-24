@@ -17,14 +17,6 @@ jobs:
         build_type: [Release, Debug]
     
     steps:
-    - name: Cache apt packages
-      uses: actions/cache@v4
-      with:
-        path: /var/cache/apt
-        key: ${{ runner.os }}-apt-cache-${{ hashFiles('.github/workflows/tests.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-apt-cache-
-
     - name: Install dependencies
       run: |
         sudo apt-get update

@@ -8,49 +8,59 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ci-image:
-    name: Build CI Image
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image_name: ${{ steps.get_image_name.outputs.image_name }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get image name
-        id: get_image_name
-        run: echo "image_name=ghcr.io/${{ github.repository_owner }}/maplibre-native-slint-ci:${{ github.sha }}" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
-      - name: Build CI image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.get_image_name.outputs.image_name }}
-          target: base
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   test:
     name: Run Tests
-    needs: build-ci-image
     runs-on: ubuntu-latest
-    container: ${{ needs.build-ci-image.outputs.image_name }}
     
     strategy:
       matrix:
         build_type: [Release, Debug]
     
     steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y 
+          build-essential 
+          ccache 
+          cmake 
+          curl 
+          pkg-config 
+          git 
+          libgl1-mesa-dev 
+          libgles2-mesa-dev 
+          libegl1-mesa-dev 
+          libx11-dev 
+          libxrandr-dev 
+          libxinerama-dev 
+          libxcursor-dev 
+          libxi-dev 
+          libxext-dev 
+          xvfb 
+          libbrotli-dev 
+          libcurl4-openssl-dev 
+          libglfw3-dev 
+          libidn2-dev 
+          libjpeg-dev 
+          libnghttp2-dev 
+          libpng-dev 
+          libpsl-dev 
+          libssl-dev 
+          libuv1-dev 
+          libwebp-dev 
+          libzstd-dev 
+          libunistring-dev 
+          meson 
+          zlib1g-dev 
+          gcc 
+          lcov 
+          clang
+
+    - name: Install Rust
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
     - name: Checkout code
       uses: actions/checkout@v5
       with:
@@ -73,8 +83,8 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          /root/.cargo/registry
-          /root/.cargo/git
+          ~/.cargo/registry
+          ~/.cargo/git
           build/_deps
         key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('**/CMakeLists.txt') }}
         restore-keys: |
@@ -83,7 +93,6 @@ jobs:
     
     - name: Configure CMake
       run: |
-        export PATH="/root/.cargo/bin:${PATH}"
         mkdir -p build
         cd build
         cmake .. \

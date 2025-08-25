@@ -40,7 +40,7 @@ This guide walks you through building the **MapLibre Native + Slint** integratio
 ## 2) Clone the repository
 
 ```bat
-git clone https://github.com/yuiseki/maplibre-native-slint.git
+git clone https://github.com/maplibre/maplibre-native-slint.git
 cd maplibre-native-slint
 git submodule update --init --recursive
 ````

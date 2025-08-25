@@ -125,6 +125,25 @@ add_executable(maplibre-slint-example
     platform/custom_file_source.cpp
 )
 
+if (WIN32)
+  target_compile_definitions(maplibre-slint-example
+    PRIVATE NOMINMAX _USE_MATH_DEFINES WIN32_LEAN_AND_MEAN)
+
+  if (MSVC)
+    target_compile_options(maplibre-slint-example PRIVATE /utf-8 /MP)
+  endif()
+
+  find_package(libuv CONFIG REQUIRED)
+
+  if (TARGET libuv::uv_a)
+    set(ML_UV_TARGET libuv::uv_a)
+  else()
+    set(ML_UV_TARGET libuv::uv)
+  endif()
+
+  target_link_libraries(maplibre-slint-example PRIVATE ${ML_UV_TARGET})
+endif()
+
 # Associate .slint files with the target (only if the helper is available)
 if (COMMAND slint_target_sources)
     slint_target_sources(maplibre-slint-example

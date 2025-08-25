@@ -1,0 +1,25 @@
+{
+  "name": "maplibre-native-slint",
+  "version-string": "0.1.0",
+  "dependencies": [
+    {
+      "name": "curl",
+      "features": [
+        "ssl"
+      ]
+    },
+    "dlfcn-win32",
+    "glfw3",
+    "icu",
+    "libjpeg-turbo",
+    "libpng",
+    "libuv",
+    "libwebp",
+    "opengl-registry",
+    {
+      "name": "pkgconf",
+      "host": true
+    },
+    "egl-registry"
+  ]
+}

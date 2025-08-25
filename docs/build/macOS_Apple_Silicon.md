@@ -45,7 +45,7 @@ source ~/.cargo/env
 
 ```bash
 # Clone the repository
-git clone https://github.com/yuiseki/maplibre-native-slint.git
+git clone https://github.com/maplibre/maplibre-native-slint.git
 cd maplibre-native-slint
 
 # Initialize and update submodules

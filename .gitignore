@@ -1,6 +1,7 @@
 # CMake
 !docs/build
 build/
+build-ninja/
 .cache
 CMakeCache.txt
 CMakeFiles/

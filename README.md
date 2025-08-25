@@ -57,11 +57,57 @@ cmake --build build
 
 ## Features
 
-- **CPU-based Rendering**: Renders MapLibre Native output to a CPU pixel buffer for integration with Slint.
+- **Hybrid GPU-CPU Rendering**: MapLibre Native renders on GPU, with pixel data transferred to CPU for Slint integration.
 - **Slint UI Integration**: Displays maps within Slint user interfaces
 - **Custom File Source**: HTTP-based tile and resource loading
 - **Touch/Mouse Interaction**: Interactive map navigation (Partial, in progress)
 - **Cross-platform**: Supports Linux, Windows, and macOS
+
+## Platform and Backend Support
+
+### Graphics Backend Features
+
+This project supports multiple rendering backends, automatically selected based on the target platform:
+
+- **OpenGL/GLES** (primary on Linux/Windows): Uses HeadlessFrontend with CPU-based rendering
+- **Metal** (primary on macOS): Native Metal framework integration for Apple Silicon
+- **Vulkan**: Not currently implemented
+
+### Platform Support Matrix
+
+The following platform and graphics backend combinations are supported and tested:
+
+| Platform        | OpenGL/GLES | Metal | Vulkan | CI Status |
+|----------------|-------------|-------|---------|-----------|
+| Linux x86_64   | ✅          | ❌    | ❌      | ✅        |
+| Linux ARM64    | 🟨*         | ❌    | ❌      | ❌        |
+| Windows x86_64 | ✅          | ❌    | ❌      | ❌        |
+| Windows ARM64  | 🟨*         | ❌    | ❌      | ❌        |
+| macOS ARM64    | ❌          | ✅    | ❌      | ❌        |
+| macOS x86_64   | ❌          | 🟨*   | ❌      | ❌        |
+
+**Legend:**
+- ✅ **Fully Supported**: Tested and working
+- 🟨 **Experimental**: Should work but not extensively tested
+- ❌ **Not Supported**: Not implemented or not compatible
+
+**Notes:**
+- \* Architecture should work but hasn't been extensively tested
+- CI currently runs only on Ubuntu x86_64 with Xvfb for headless testing
+- macOS builds explicitly target ARM64 only (x86_64 is excluded)
+- Windows builds target x64 architecture via MSVC toolchain
+
+### Build Configuration Options
+
+The project automatically detects and configures the appropriate backend:
+
+```bash
+# Linux/Windows (OpenGL/GLES)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+# macOS (Metal backend)
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode
+```
 
 ## Technical Details
 
@@ -76,17 +122,20 @@ This project has been updated to work with the latest MapLibre Native APIs:
 
 ### Rendering Pipeline
 
-The current rendering pipeline is CPU-based:
+The current rendering pipeline involves GPU-to-CPU data transfer:
 
-1. MapLibre Native's `HeadlessFrontend` renders the map to an in-memory pixel buffer (`mbgl::PremultipliedImage`).
-2. This image data is converted from a premultiplied alpha format to a non-premultiplied format.
-3. The pixel data is copied into a `slint::SharedPixelBuffer`.
-4. Slint uses this buffer to render the map image within its UI.
-5. User interactions from the Slint UI are captured and forwarded to the MapLibre Native map instance.
+1. MapLibre Native's `HeadlessFrontend` renders the map using GPU (OpenGL/Metal/etc.) to an internal framebuffer.
+2. The GPU-rendered image is read back to CPU memory as `mbgl::PremultipliedImage`.
+3. This CPU image data is converted from premultiplied alpha format to non-premultiplied format.
+4. The pixel data is copied into a `slint::SharedPixelBuffer` for CPU-based rendering.
+5. Slint displays the map image within its UI using the CPU pixel buffer.
+6. User interactions from the Slint UI are captured and forwarded to the MapLibre Native map instance.
+
+**Performance Note**: This GPU-to-CPU data transfer creates overhead. Future improvements could use `BorrowedOpenGLTexture` for direct GPU texture sharing.
 
 ## To Do
 
-- [ ] Implement a more efficient GPU-based rendering pipeline using `BorrowedOpenGLTexture` to avoid CPU-GPU data transfer overhead.
+- [ ] Implement a more efficient GPU-based rendering pipeline using `BorrowedOpenGLTexture` to eliminate GPU-to-CPU data transfer overhead.
 - [ ] Fully implement and stabilize touch and mouse interactions (zooming, panning, rotation).
 - [ ] Add more examples and improve documentation.
 

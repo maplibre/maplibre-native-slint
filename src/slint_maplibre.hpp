@@ -29,6 +29,7 @@ public:
     void handle_double_click(float x, float y, bool shift);
     void handle_wheel_zoom(float x, float y, float dy);
     void setStyleUrl(const std::string& url);
+    void fly_to(const std::string& location);
 
     // Manually drive the map's run loop
     void run_map_loop();

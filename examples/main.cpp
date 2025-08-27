@@ -59,6 +59,12 @@ int main(int argc, char** argv) {
             slint_map_libre->handle_wheel_zoom(x, y, dy);
         });
 
+    main_window->global<MapAdapter>().on_fly_to(
+        [=](const slint::SharedString &location) {
+            slint_map_libre->fly_to(
+                std::string(location.data(), location.size()));
+        });
+
     // Initialize/resize MapLibre to match the map image area
     main_window->on_map_size_changed([=]() {
         const auto s = main_window->get_map_size();

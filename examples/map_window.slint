@@ -1,4 +1,4 @@
-import { StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
+import { Button, VerticalBox, ComboBox, HorizontalBox } from "std-widgets.slint";
 
 // Define a struct to hold window size
 export struct Size {
@@ -15,6 +15,7 @@ export global MapAdapter {
     callback style_changed(string);
     callback double_click_with_shift(float, float, bool);
     callback wheel_zoom(float, float, float);
+    callback fly_to(string);
 }
 
 export component MapWindow inherits Window {
@@ -50,10 +51,30 @@ export component MapWindow inherits Window {
     }
 
     VerticalBox {
-        ComboBox {
-            model: root.style_urls;
-            selected(url) => {
-                MapAdapter.style_changed(url);
+        HorizontalBox {
+            ComboBox {
+                model: root.style_urls;
+                selected(url) => {
+                    MapAdapter.style_changed(url);
+                }
+            }
+            Button {
+                text: "Paris";
+                clicked => {
+                    MapAdapter.fly_to("paris");
+                }
+            }
+            Button {
+                text: "New York";
+                clicked => {
+                    MapAdapter.fly_to("new_york");
+                }
+            }
+            Button {
+                text: "Tokyo";
+                clicked => {
+                    MapAdapter.fly_to("tokyo");
+                }
             }
         }
         map := Image {

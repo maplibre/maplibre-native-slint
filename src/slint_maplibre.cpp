@@ -274,3 +274,28 @@ void SlintMapLibre::run_map_loop() {
         run_loop->runOnce();
     }
 }
+
+void SlintMapLibre::fly_to(const std::string& location) {
+    if (!map)
+        return;
+
+    mbgl::CameraOptions cameraOptions;
+    if (location == "paris") {
+        cameraOptions.center = mbgl::LatLng{48.8566, 2.3522};
+    } else if (location == "new_york") {
+        cameraOptions.center = mbgl::LatLng{40.7128, -74.0060};
+    } else if (location == "tokyo") {
+        cameraOptions.center = mbgl::LatLng{35.6895, 139.6917};
+    }
+    cameraOptions.zoom = 12.0;
+
+    mbgl::AnimationOptions animationOptions{std::chrono::seconds(2)};
+    // Ease from slow to fast and then slow again
+    animationOptions.easing.emplace(0.25, 0.46, 0.45, 0.94);
+
+    map->flyTo(cameraOptions, animationOptions);
+
+    if (m_renderCallback) {
+        slint::invoke_from_event_loop(m_renderCallback);
+    }
+}

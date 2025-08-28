@@ -6,6 +6,7 @@
 #include "slint_maplibre.hpp"
 
 int main(int argc, char** argv) {
+    std::cout << "[main] Starting application" << std::endl;
     auto main_window = MapWindow::create();
     auto slint_map_libre = std::make_shared<SlintMapLibre>();
 
@@ -15,20 +16,27 @@ int main(int argc, char** argv) {
     std::cout << "Initial Window Size: " << static_cast<int>(size.width) << "x"
               << static_cast<int>(size.height) << std::endl;
 
-    // Create a lambda for rendering logic
+    // This function is ONLY for rendering. It will be called by the observer.
     auto render_function = [=]() {
-        slint_map_libre->run_map_loop();  // Drive the MapLibre event loop
         std::cout << "Rendering map..." << std::endl;
         auto image = slint_map_libre->render_map();
         main_window->global<MapAdapter>().set_map_texture(image);
     };
 
-    // Set the callback for asynchronous rendering requests from MapLibre
+    // Pass the render function to SlintMapLibre, which will pass it to the
+    // observer.
     slint_map_libre->setRenderCallback(render_function);
 
-    // The timer in .slint file will trigger this callback periodically for
-    // continuous rendering
-    main_window->global<MapAdapter>().on_render_map(render_function);
+    // The timer in .slint file will trigger this callback periodically.
+    // This callback drives the MapLibre run loop and, if needed, performs
+    // rendering on the UI thread.
+    main_window->global<MapAdapter>().on_tick_map_loop([=]() {
+        slint_map_libre->run_map_loop();
+        if (slint_map_libre->take_repaint_request() ||
+            slint_map_libre->consume_forced_repaint()) {
+            render_function();
+        }
+    });
 
     main_window->global<MapAdapter>().on_style_changed(
         [=](const slint::SharedString& url) {
@@ -60,7 +68,7 @@ int main(int argc, char** argv) {
         });
 
     main_window->global<MapAdapter>().on_fly_to(
-        [=](const slint::SharedString &location) {
+        [=](const slint::SharedString& location) {
             slint_map_libre->fly_to(
                 std::string(location.data(), location.size()));
         });
@@ -81,7 +89,15 @@ int main(int argc, char** argv) {
         }
     });
 
-    main_window->run();
-
-    return 0;
+    std::cout << "[main] Entering UI event loop" << std::endl;
+    try {
+        main_window->run();
+        std::cout << "[main] UI event loop exited normally" << std::endl;
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "[main] Unhandled exception: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "[main] Unhandled unknown exception" << std::endl;
+    }
+    return 1;
 }

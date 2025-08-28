@@ -8,7 +8,7 @@ export struct Size {
 
 export global MapAdapter {
     in-out property <image> map_texture;
-    callback render_map();
+    callback tick_map_loop();
     callback mouse_press(float, float);
     callback mouse_release(float, float);
     callback mouse_move(float, float, bool);
@@ -43,10 +43,10 @@ export component MapWindow inherits Window {
     ];
 
     Timer {
-        interval: 200ms;
+        interval: 16ms;
         running: true;
         triggered => {
-            MapAdapter.render_map();
+            MapAdapter.tick_map_loop();
         }
     }
 

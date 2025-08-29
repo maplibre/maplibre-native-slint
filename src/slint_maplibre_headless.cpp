@@ -1,4 +1,4 @@
-#include "slint_maplibre.hpp"
+#include "slint_maplibre_headless.hpp"
 
 #include <algorithm>
 #include <cmath>

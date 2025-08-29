@@ -53,7 +53,7 @@ tests/
 ├── test_utils.cpp
 ├── unit/                      # Unit tests
 │   ├── simple_unit_test.cpp   # Simple tests (no OpenGL)
-│   ├── slint_maplibre_test.cpp
+│   ├── slint_maplibre_headless_test.cpp
 │   ├── custom_file_source_test.cpp
 │   ├── custom_run_loop_test.cpp
 │   └── test_main.cpp          # GoogleTest main
@@ -73,7 +73,7 @@ tests/
 
 ### Unit Tests (OpenGL Required)
 
-#### SlintMapLibre Tests (`unit/slint_maplibre_test.cpp`)
+#### SlintMapLibre Tests (`unit/slint_maplibre_headless_test.cpp`)
 - Constructor/destructor behavior
 - Initialization with various dimensions
 - Resize operations
@@ -155,7 +155,7 @@ TEST_F(YourComponentTest, BasicFunctionality) {
 ### Integration Test Example
 ```cpp
 #include "../test_utils.hpp"
-#include "slint_maplibre.hpp"
+#include "slint_maplibre_headless.hpp"
 #include <gtest/gtest.h>
 
 class YourIntegrationTest : public test::OpenGLTest {

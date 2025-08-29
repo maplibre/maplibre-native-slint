@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "map_window.h"
-#include "slint_maplibre.hpp"
+#include "slint_maplibre_headless.hpp"
 
 int main(int argc, char** argv) {
     std::cout << "[main] Starting application" << std::endl;

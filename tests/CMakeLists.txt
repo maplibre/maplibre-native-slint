@@ -5,7 +5,7 @@ find_package(Threads REQUIRED)
 
 # Common sources to be tested
 set(MAPLIBRE_SLINT_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/slint_maplibre.cpp
+    ${CMAKE_SOURCE_DIR}/src/slint_maplibre_headless.cpp
     ${CMAKE_SOURCE_DIR}/platform/custom_file_source.cpp
 )
 

@@ -121,7 +121,7 @@ endif()
 # --- executable ---
 add_executable(maplibre-slint-example
     examples/main.cpp
-    src/slint_maplibre.cpp
+    src/slint_maplibre_headless.cpp
     platform/custom_file_source.cpp
 )
 

@@ -308,13 +308,11 @@ void SlintMapLibre::handle_wheel_zoom(float x, float y, float dy) {
 }
 
 void SlintMapLibre::run_map_loop() {
-    // NOTE: Disabled direct runLoop->runOnce() call to avoid re-entrant
-    // CFRunLoop execution inside winit/Slint event handler which caused a
-    // panic. A dedicated background thread or task queue integration should
-    // replace this. For now, map remains mostly static after initial loads.
-    (void)run_loop;  // suppress unused warning when disabled
-    // Drive custom animation if active
-    tick_animation();
+    if (run_loop) {
+        run_loop->runOnce();
+    } else {
+        // Not initialized yet; nothing to pump.
+    }
 }
 
 bool SlintMapLibre::take_repaint_request() {

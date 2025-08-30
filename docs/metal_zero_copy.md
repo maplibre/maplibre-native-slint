@@ -57,6 +57,7 @@ git submodule update --init --recursive
 
 ```bash
 # Configure with Ninja (recommended for faster builds)
+# Note: MLN_WITH_OPENGL=OFF is required to avoid hybrid backend issues
 cmake -B build-metal -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -DSLINT_MAPLIBRE_USE_METAL=ON -G Ninja .
 
 # Build the project
@@ -65,6 +66,8 @@ ninja -C build-metal
 # Run the example
 ./build-metal/maplibre-slint-example
 ```
+
+**Important**: The `MLN_WITH_OPENGL=OFF` flag is essential on macOS. When both OpenGL and Metal are enabled, MapLibre's `DepthMode` struct includes an additional `range` field that must be initialized, which can cause compilation errors in Metal-specific code. Using Metal-only configuration ensures a clean build.
 
 ### Alternative: Xcode Build (for debugging)
 

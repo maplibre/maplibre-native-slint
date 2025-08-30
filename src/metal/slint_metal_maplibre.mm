@@ -18,6 +18,7 @@
 #include <mbgl/style/style.hpp>
 #include <mbgl/util/run_loop.hpp>
 #include <mbgl/renderer/renderer_frontend.hpp>
+#include <chrono>
 #include <mbgl/renderer/update_parameters.hpp>
 #include <mbgl/actor/scheduler.hpp>
 #include <mbgl/renderer/renderer_observer.hpp>
@@ -511,12 +512,36 @@ void SlintMetalMapLibre::handle_wheel_zoom(float x, float y, float dy) {
     if (m_request_frame) m_request_frame();
 }
 void SlintMetalMapLibre::fly_to(const std::string& location) {
-    if (!m_impl || !m_impl->map) return; mbgl::LatLng target;
-    if (location == "paris") target = mbgl::LatLng{48.8566,2.3522};
-    else if (location == "new_york") target = mbgl::LatLng{40.7128,-74.0060};
-    else target = mbgl::LatLng{35.6895,139.6917};
-    auto cam = m_impl->map->getCameraOptions(); double start_zoom = cam.zoom.value_or(10.0); mbgl::CameraOptions next; next.withCenter(target); next.withZoom(start_zoom); m_impl->map->jumpTo(next);
-    // Request frame update after fly-to
+    if (!m_impl || !m_impl->map) return;
+    
+    mbgl::LatLng target;
+    double targetZoom = 12.0; // Good zoom level for city view
+    
+    if (location == "paris") {
+        target = mbgl::LatLng{48.8566, 2.3522};
+    } else if (location == "new_york") {
+        target = mbgl::LatLng{40.7128, -74.0060};
+    } else if (location == "tokyo") {
+        target = mbgl::LatLng{35.6895, 139.6917};
+    } else {
+        return; // Unknown location
+    }
+    
+    // Create camera options for the fly-to animation
+    mbgl::CameraOptions cameraOptions;
+    cameraOptions.withCenter(target);
+    cameraOptions.withZoom(targetZoom);
+    
+    // Create animation options for smooth flight
+    mbgl::AnimationOptions animationOptions;
+    animationOptions.duration = std::chrono::milliseconds(2000); // 2 second animation
+    
+    // Use flyTo for smooth animated transition
+    m_impl->map->flyTo(cameraOptions, animationOptions);
+    
+    std::cout << "[Interaction] Flying to " << location << std::endl;
+    
+    // Request frame update to start the animation
     if (m_request_frame) m_request_frame();
 }
 

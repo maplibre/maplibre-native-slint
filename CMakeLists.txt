@@ -145,6 +145,7 @@ add_executable(maplibre-slint-example
   $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>>:examples/main.cpp>
   $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>>:src/slint_maplibre_headless.cpp>
   # Legacy CPU fallback (slint_maplibre.cpp) intentionally excluded for Metal zero-copy path
+
   platform/custom_file_source.cpp
 
 )

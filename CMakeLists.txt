@@ -99,7 +99,7 @@ if (NOT TARGET Slint::Slint)
   set(FETCHCONTENT_QUIET FALSE)
 
   # Configure Slint backend based on our Metal-only setting
-  if(APPLE AND BUILD_METAL_ONLY)
+  if(APPLE AND MLN_WITH_METAL)
     message(STATUS "Configuring Slint for Metal-only: disabling OpenGL backend")
     set(SLINT_FEATURE_BACKEND_GL OFF CACHE BOOL "Disable OpenGL backend for Metal-only builds" FORCE)
     # Keep winit backend enabled - it's needed for window creation even with Metal rendering
@@ -177,15 +177,15 @@ else()
     message(FATAL_ERROR "slint_target_sources command is not available. Ensure Slint's CMake integration is present.")
 endif()
 
-option(BUILD_METAL_ONLY "On Apple, build only Metal backend and skip OpenGL/GLES lookups" ON)
+option(MLN_WITH_METAL "On Apple, build only Metal backend and skip OpenGL/GLES lookups" ON)
 
 # Find system deps (OpenGL always needed on macOS for Slint compatibility)
 if(APPLE)
   find_package(OpenGL REQUIRED)
   message(STATUS "macOS: OpenGL required for Slint compatibility")
-elseif(BUILD_METAL_ONLY)
+elseif(MLN_WITH_METAL)
   message(STATUS "Metal-only build: skipping OpenGL/GLES detection")
-else()
+elseif(MLN_WITH_OPENGL)
   find_package(OpenGL REQUIRED)
   find_package(PkgConfig REQUIRED)
 endif()
@@ -202,7 +202,7 @@ if(APPLE)
   find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 
   # Skip GLES/OpenGL libs in Metal-only mode
-  if(BUILD_METAL_ONLY)
+  if(MLN_WITH_METAL)
     set(GLES3_FOUND FALSE)
     set(GLES3_INCLUDE_DIRS "")
     set(GLES3_LIBRARIES "")
@@ -244,7 +244,7 @@ target_link_libraries(maplibre-slint-example
     mbgl-core
     cpr::cpr
     $<$<BOOL:${GLES3_LIBRARIES}>:${GLES3_LIBRARIES}>
-    $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${BUILD_METAL_ONLY}>>>:${OPENGL_LIBRARIES}>
+    $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>>:${OPENGL_LIBRARIES}>
     $<$<PLATFORM_ID:Darwin>:${OPENGL_LIBRARIES}>
     $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
     $<$<PLATFORM_ID:Darwin>:${APPKIT_FRAMEWORK}>
@@ -271,10 +271,6 @@ if(APPLE)
       set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS "-fobjc-arc -frtti")
     endif()
   endforeach()
-  target_compile_definitions(maplibre-slint-example PRIVATE SLINT_MAPLIBRE_USE_METAL=1)
-  if(BUILD_METAL_ONLY)
-    target_compile_definitions(maplibre-slint-example PRIVATE SLINT_METAL_ONLY=1)
-  endif()
   # Explicit macOS frameworks needed for winit keyboard APIs (Carbon/HIToolbox) & TIS functions
   target_link_libraries(maplibre-slint-example PRIVATE "-framework Carbon" "-framework ApplicationServices")
 endif()

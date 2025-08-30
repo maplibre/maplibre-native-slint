@@ -313,6 +313,8 @@ void SlintMapLibre::run_map_loop() {
     } else {
         // Not initialized yet; nothing to pump.
     }
+    // Drive custom animation if active
+    tick_animation();
 }
 
 bool SlintMapLibre::take_repaint_request() {

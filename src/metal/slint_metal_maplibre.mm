@@ -420,19 +420,48 @@ bool SlintMetalMapLibre::render_once() {
 
 // --- Interaction methods (basic, similar semantics to CPU path) ---
 void SlintMetalMapLibre::handle_mouse_press(float x, float y) {
-    std::cout << "[Interaction] Mouse press at (" << x << ", " << y << ")" << std::endl;
-    m_last_x = x; m_last_y = y; m_pressed = true;
+    std::cout << "[Interaction] Mouse press at (" << x << ", " << y << ")" 
+              << " (previous position was " << m_last_x << ", " << m_last_y << ")" << std::endl;
+    // For a new drag, always reset to the press position
+    m_last_x = x; 
+    m_last_y = y; 
+    m_pressed = true;
+    m_move_count = 0;  // Reset move counter for new drag
 }
-void SlintMetalMapLibre::handle_mouse_release(float, float) { 
-    std::cout << "[Interaction] Mouse release" << std::endl;
+void SlintMetalMapLibre::handle_mouse_release(float x, float y) { 
+    std::cout << "[Interaction] Mouse release at (" << x << ", " << y << ")" << std::endl;
+    // Always reset state on release
     m_pressed = false; 
+    m_move_count = 0;
+    // Update position to release point to maintain continuity
+    m_last_x = x;
+    m_last_y = y;
 }
 void SlintMetalMapLibre::handle_mouse_move(float x, float y, bool pressed) {
     if (!m_impl || !m_impl->map) {
         std::cout << "[Interaction] No map available for mouse move" << std::endl;
         return; 
     }
+    
+    // If we're not pressed but Slint thinks we are, sync the state
+    if (!pressed && m_pressed) {
+        std::cout << "[Interaction] Implicit mouse release detected" << std::endl;
+        handle_mouse_release(x, y);
+        return;
+    }
+    
     if (pressed && m_pressed) {
+        m_move_count++;
+        
+        // Skip the first move after mouse_press to avoid jump
+        // This is because Slint calls mouse_press after threshold, then immediately mouse_move
+        if (m_move_count == 1) {
+            std::cout << "[Interaction] First move after press, resetting position to (" << x << ", " << y << ")" << std::endl;
+            m_last_x = x;
+            m_last_y = y;
+            return;
+        }
+        
         double dx = x - m_last_x; double dy = y - m_last_y; 
         
         // Only move if there's actual movement to avoid unnecessary updates
@@ -444,12 +473,14 @@ void SlintMetalMapLibre::handle_mouse_move(float x, float y, bool pressed) {
                 const mbgl::gfx::BackendScope scope(*m_impl->backend, mbgl::gfx::BackendScope::ScopeType::Implicit);
                 m_impl->map->moveBy({dx, dy});
                 std::cout << "[Interaction] Map moved successfully" << std::endl;
+                
+                // Only update last position after successful move
+                m_last_x = x; 
+                m_last_y = y;
             } catch (const std::exception& e) {
                 std::cerr << "[Interaction] Exception during map move: " << e.what() << std::endl;
                 return;
             }
-            
-            m_last_x = x; m_last_y = y;
             
             // Request frame update during drag to prevent freezing
             if (m_request_frame) {

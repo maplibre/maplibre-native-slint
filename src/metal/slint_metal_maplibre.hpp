@@ -65,6 +65,7 @@ private:
     float m_last_x = 0.f;
     float m_last_y = 0.f;
     bool m_pressed = false;
+    int m_move_count = 0;
 
     // Style management
     std::string m_pendingStyleUrl;

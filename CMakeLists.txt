@@ -10,6 +10,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add testing support (default OFF)
 option(BUILD_TESTS "Build tests" OFF)
+option(MLNS_WITH_SLINT_GL "Enable Slint OpenGL zero-copy path" ON)
+# Force-fetch Slint from source to control enabled renderers (avoids picking an installed Slint without Skia)
+option(MLNS_FORCE_FETCH_SLINT "Fetch/build Slint from source instead of find_package" ON)
 
 # Make FetchContent available early (keep for other fetches if needed)
 include(FetchContent)
@@ -78,23 +81,31 @@ endif()
 
 
 #
-# Slint: try to find it, otherwise fetch & build it via FetchContent
+# Slint: configure features (enable Skia/OpenGL on Windows for robust GPU)
+# These must be set before FetchContent_MakeAvailable(Slint)
+if (WIN32)
+  set(SLINT_FEATURE_BACKEND_WINIT ON CACHE BOOL "" FORCE)
+  set(SLINT_FEATURE_RENDERER_SKIA ON CACHE BOOL "" FORCE)
+  set(SLINT_FEATURE_RENDERER_SKIA_OPENGL ON CACHE BOOL "" FORCE)
+  # Keep FemtoVG available too (we might compare later)
+  set(SLINT_FEATURE_RENDERER_FEMTOVG ON CACHE BOOL "" FORCE)
+endif()
+
 #
-find_package(Slint QUIET)
-
-if (NOT TARGET Slint::Slint)
-  message(STATUS "Slint CMake target not found. Downloading Slint (api/cpp) via FetchContent and building locally.")
-  # show progress for debugging if needed
+# Slint: prefer FetchContent so we can enable Skia/OpenGL features on Windows
+#
+if (MLNS_FORCE_FETCH_SLINT)
+  message(STATUS "Using FetchContent for Slint (MLNS_FORCE_FETCH_SLINT=ON)")
   set(FETCHCONTENT_QUIET FALSE)
-
   FetchContent_Declare(
     Slint
     GIT_REPOSITORY https://github.com/slint-ui/slint.git
     GIT_TAG release/1
     SOURCE_SUBDIR api/cpp
   )
-
   FetchContent_MakeAvailable(Slint)
+else()
+  find_package(Slint REQUIRED)
 endif()
 
 # Ensure FetchContent actually populated the Slint content if we expected it
@@ -124,6 +135,26 @@ add_executable(maplibre-slint-example
     src/slint_maplibre_headless.cpp
     platform/custom_file_source.cpp
 )
+
+# Optional Slint OpenGL zero-copy library (scaffold). This does not change the
+# default rendering path yet; it provides a target we can evolve without
+# breaking the current build. The example links it when enabled so symbols are
+# available, guarded by compile-time macros.
+if(MLNS_WITH_SLINT_GL)
+  add_library(slint_maplibre_gl STATIC
+    src/slint_maplibre_gl.cpp
+  )
+  target_include_directories(slint_maplibre_gl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  target_compile_features(slint_maplibre_gl PUBLIC cxx_std_20)
+  target_link_libraries(slint_maplibre_gl PUBLIC Slint::Slint mbgl-core ${OPENGL_LIBRARIES})
+  target_compile_definitions(slint_maplibre_gl PUBLIC MLNS_WITH_SLINT_GL=1)
+  if (WIN32)
+    target_compile_definitions(slint_maplibre_gl PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN _USE_MATH_DEFINES)
+  endif()
+
+  target_link_libraries(maplibre-slint-example PRIVATE slint_maplibre_gl)
+  target_compile_definitions(maplibre-slint-example PRIVATE MLNS_WITH_SLINT_GL=1)
+endif()
 
 if (WIN32)
   target_compile_definitions(maplibre-slint-example
@@ -157,24 +188,29 @@ endif()
 find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-# Check if we're on macOS and handle OpenGL ES differently
+# Platform-specific handling for GLES vs OpenGL
 if(APPLE)
     # macOS specific settings
     set(CMAKE_OSX_ARCHITECTURES "arm64")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
 
-    # Find Metal framework for MapLibre
+    # Find Metal framework for MapLibre (optional)
     find_library(METAL_FRAMEWORK Metal)
 
-    # On macOS, use OpenGL instead of GLES
+    # Use desktop OpenGL on macOS; no GLES lookup
+    set(GLES3_FOUND TRUE)
+    set(GLES3_INCLUDE_DIRS "")
+    set(GLES3_LIBRARIES "")
+elseif(WIN32)
+    # On Windows we use desktop OpenGL (opengl32); skip pkg-config glesv2 entirely
     set(GLES3_FOUND TRUE)
     set(GLES3_INCLUDE_DIRS "")
     set(GLES3_LIBRARIES "")
 else()
-    # On other platforms, try to find GLES
+    # Linux and others: try GLES via pkg-config, otherwise fall back to OpenGL
     pkg_check_modules(GLES3 glesv2)
     if(NOT GLES3_FOUND)
-        message(WARNING "GLES2 not found, falling back to OpenGL")
+        message(STATUS "GLESv2 not found, falling back to desktop OpenGL")
         set(GLES3_FOUND TRUE)
         set(GLES3_INCLUDE_DIRS "")
         set(GLES3_LIBRARIES "")

@@ -1,14 +1,13 @@
 import { Button, VerticalBox, ComboBox, HorizontalBox } from "std-widgets.slint";
 
-// Define a struct to hold window size
-export struct Size {
+// Define a struct to hold window size (renamed to avoid macOS MacTypes::Size clash)
+export struct WindowSize {
     width: length,
     height: length,
 }
 
 export global MapAdapter {
-    in-out property <image> map_texture;
-    callback tick_map_loop();
+    // Image property removed (zero-copy Metal layer will be embedded natively)
     callback mouse_press(float, float);
     callback mouse_release(float, float);
     callback mouse_move(float, float, bool);
@@ -24,31 +23,26 @@ export component MapWindow inherits Window {
     preferred-height: 600px;
 
     // Expose window size via Size-typed property
-    out property<Size> window-size: { width: root.width, height: root.height };
+    out property<WindowSize> window_size: { width: root.width, height: root.height };
 
     // Callback when the window size changes
-    callback window-size-changed;
+    callback window_size_changed;
 
     // Invoke callback when window-size changes
-    changed window-size => { window-size-changed(); }
+    changed window_size => { window_size_changed(); }
 
     // Expose map image area size so backend can match framebuffer size
-    out property<Size> map-size: { width: map.width, height: map.height };
-    callback map-size-changed;
-    changed map-size => { map-size-changed(); }
+    out property<WindowSize> map_size: { width: map.width, height: map.height };
+    callback map_size_changed;
+    changed map_size => { map_size_changed(); }
 
     property <[string]> style_urls: [
+        "https://raw.githubusercontent.com/maplibre/demotiles/main/style.json",
         "https://demotiles.maplibre.org/style.json",
         "https://tile.openstreetmap.jp/styles/osm-bright/style.json"
     ];
 
-    Timer {
-        interval: 16ms;
-        running: true;
-        triggered => {
-            MapAdapter.tick_map_loop();
-        }
-    }
+    // Removed periodic timer; Metal rendering is invalidate-driven for zero-copy path.
 
     VerticalBox {
         HorizontalBox {
@@ -77,8 +71,9 @@ export component MapWindow inherits Window {
                 }
             }
         }
-        map := Image {
-            source: MapAdapter.map_texture;
+        // Placeholder Rectangle acts as map container; native CAMetalLayer will be attached to its window region.
+        map := Rectangle {
+            background: transparent; // transparent so Metal layer shows through
 
             touch := TouchArea {
                 // Keep internal dragging state to control cursor explicitly

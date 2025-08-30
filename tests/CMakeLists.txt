@@ -5,9 +5,13 @@ find_package(Threads REQUIRED)
 
 # Common sources to be tested
 set(MAPLIBRE_SLINT_SOURCES
-    ${CMAKE_SOURCE_DIR}/src/slint_maplibre_headless.cpp
     ${CMAKE_SOURCE_DIR}/platform/custom_file_source.cpp
 )
+
+# Add CPU path source when not using Metal-only configuration
+if(NOT MLN_WITH_OPENGL AND NOT MLN_WITH_METAL)
+    list(APPEND MAPLIBRE_SLINT_SOURCES ${CMAKE_SOURCE_DIR}/src/slint_maplibre_headless.cpp)
+endif()
 
 # Common include directories for tests
 set(MAPLIBRE_SLINT_TEST_INCLUDE_DIRS

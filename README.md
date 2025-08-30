@@ -69,8 +69,8 @@ cmake --build build
 
 This project supports multiple rendering backends, automatically selected based on the target platform:
 
-- **OpenGL/GLES** (primary on Linux/Windows): Uses HeadlessFrontend with CPU-based rendering
-- **Metal** (primary on macOS): Native Metal framework integration for Apple Silicon
+- **OpenGL/GLES** (Linux/Windows): Uses HeadlessFrontend with CPU-based rendering
+- **Metal** (macOS exclusive): Native Metal framework integration with zero-copy rendering for Apple Silicon
 - **Vulkan**: Not currently implemented
 
 ### Platform Support Matrix

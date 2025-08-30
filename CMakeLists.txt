@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
-if(APPLE)
+
+# Check if the generator supports Swift
+if(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja" AND APPLE)
+  # For Unix Makefiles and Ninja on macOS, don't enable Swift
+  project(maplibre-native-slint LANGUAGES C CXX OBJC OBJCXX)
+  message(STATUS "Using ${CMAKE_GENERATOR} generator - Swift language disabled")
+elseif(APPLE)
   project(maplibre-native-slint LANGUAGES C CXX OBJC OBJCXX Swift)
 else()
   project(maplibre-native-slint LANGUAGES C CXX)
@@ -7,6 +13,9 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Enforce static libraries to simplify runtime distribution (avoid missing dylibs like libcpr)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 
 # Add testing support (default OFF)
 option(BUILD_TESTS "Build tests" OFF)
@@ -53,14 +62,16 @@ if(APPLE)
   set(CMAKE_XCODE_ATTRIBUTE_EXCLUDED_ARCHS[sdk=macosx*] "x86_64")
 endif()
 
-# Disable MapLibre Native tests/benches/render-tests in the vendored tree
-set(MLN_WITH_TESTS OFF CACHE BOOL "Disable MapLibre tests" FORCE)
-set(MLN_WITH_RENDER_TESTS OFF CACHE BOOL "Disable MapLibre render tests" FORCE)
-set(MLN_WITH_BENCHMARKS OFF CACHE BOOL "Disable MapLibre benchmarks" FORCE)
+set(MLN_WITH_RTTI ON CACHE BOOL "Enable RTTI for MapLibre" FORCE)
 # (Older CMake options used in some revisions; harmless if unknown)
 set(MBGL_WITH_TESTS OFF CACHE BOOL "" FORCE)
 set(MBGL_WITH_RENDER_TESTS OFF CACHE BOOL "" FORCE)
 set(MBGL_WITH_BENCHMARKS OFF CACHE BOOL "" FORCE)
+
+set(SLINT_MAPLIBRE_USE_METAL ON CACHE BOOL "Metal zero-copy backend always enabled" FORCE)
+if(APPLE)
+  message(STATUS "Metal zero-copy backend enabled (CPU fallback removed)")
+endif()
 
 # Add MapLibre (will use vendored dependencies inside vendor/maplibre-native)
 add_subdirectory(vendor/maplibre-native EXCLUDE_FROM_ALL)
@@ -86,6 +97,15 @@ if (NOT TARGET Slint::Slint)
   message(STATUS "Slint CMake target not found. Downloading Slint (api/cpp) via FetchContent and building locally.")
   # show progress for debugging if needed
   set(FETCHCONTENT_QUIET FALSE)
+
+  # Configure Slint backend based on our Metal-only setting
+  if(APPLE AND BUILD_METAL_ONLY)
+    message(STATUS "Configuring Slint for Metal-only: disabling OpenGL backend")
+    set(SLINT_FEATURE_BACKEND_GL OFF CACHE BOOL "Disable OpenGL backend for Metal-only builds" FORCE)
+    # Keep winit backend enabled - it's needed for window creation even with Metal rendering
+    set(SLINT_FEATURE_BACKEND_WINIT ON CACHE BOOL "Enable winit backend for window creation" FORCE)
+    set(SLINT_FEATURE_RENDERER_FEMTOVG ON CACHE BOOL "Enable femtovg renderer" FORCE)
+  endif()
 
   FetchContent_Declare(
     Slint
@@ -120,9 +140,13 @@ endif()
 
 # --- executable ---
 add_executable(maplibre-slint-example
-    examples/main.cpp
-    src/slint_maplibre_headless.cpp
-    platform/custom_file_source.cpp
+
+  $<$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>:examples/main.mm>
+  $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>>:examples/main.cpp>
+  $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${MLN_WITH_METAL}>>>:src/slint_maplibre_headless.cpp>
+  # Legacy CPU fallback (slint_maplibre.cpp) intentionally excluded for Metal zero-copy path
+  platform/custom_file_source.cpp
+
 )
 
 if (WIN32)
@@ -153,55 +177,107 @@ else()
     message(FATAL_ERROR "slint_target_sources command is not available. Ensure Slint's CMake integration is present.")
 endif()
 
-# Find system deps
-find_package(OpenGL REQUIRED)
-find_package(PkgConfig REQUIRED)
+option(BUILD_METAL_ONLY "On Apple, build only Metal backend and skip OpenGL/GLES lookups" ON)
+
+# Find system deps (OpenGL always needed on macOS for Slint compatibility)
+if(APPLE)
+  find_package(OpenGL REQUIRED)
+  message(STATUS "macOS: OpenGL required for Slint compatibility")
+elseif(BUILD_METAL_ONLY)
+  message(STATUS "Metal-only build: skipping OpenGL/GLES detection")
+else()
+  find_package(OpenGL REQUIRED)
+  find_package(PkgConfig REQUIRED)
+endif()
 
 # Check if we're on macOS and handle OpenGL ES differently
 if(APPLE)
-    # macOS specific settings
-    set(CMAKE_OSX_ARCHITECTURES "arm64")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
+  # macOS specific settings
+  set(CMAKE_OSX_ARCHITECTURES "arm64")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
 
-    # Find Metal framework for MapLibre
-    find_library(METAL_FRAMEWORK Metal)
+  # Find Metal frameworks for MapLibre
+  find_library(METAL_FRAMEWORK Metal)
+  find_library(APPKIT_FRAMEWORK AppKit)
+  find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 
-    # On macOS, use OpenGL instead of GLES
+  # Skip GLES/OpenGL libs in Metal-only mode
+  if(BUILD_METAL_ONLY)
+    set(GLES3_FOUND FALSE)
+    set(GLES3_INCLUDE_DIRS "")
+    set(GLES3_LIBRARIES "")
+  else()
+    # Provide empty GLES variables for compatibility if not found
     set(GLES3_FOUND TRUE)
     set(GLES3_INCLUDE_DIRS "")
     set(GLES3_LIBRARIES "")
+  endif()
 else()
-    # On other platforms, try to find GLES
-    pkg_check_modules(GLES3 glesv2)
-    if(NOT GLES3_FOUND)
-        message(WARNING "GLES2 not found, falling back to OpenGL")
-        set(GLES3_FOUND TRUE)
-        set(GLES3_INCLUDE_DIRS "")
-        set(GLES3_LIBRARIES "")
-    endif()
+  # Non-Apple: attempt GLES first (if PkgConfig was found)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(GLES3 glesv2)
+  if(NOT GLES3_FOUND)
+    message(WARNING "GLES2 not found, falling back to OpenGL")
+    set(GLES3_FOUND TRUE)
+    set(GLES3_INCLUDE_DIRS "")
+    set(GLES3_LIBRARIES "")
+  endif()
 endif()
 
 # Include dirs for this project (Slint::Slint will propagate its own include dirs)
-target_include_directories(maplibre-slint-example
-    PRIVATE
-        src
-        platform
-        ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/include
-        ${CMAKE_BINARY_DIR}/vendor/maplibre-native/include
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${GLES3_INCLUDE_DIRS}
+target_include_directories(maplibre-slint-example PRIVATE
+  src
+  src/metal
+  platform
+  ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/include
+  ${CMAKE_BINARY_DIR}/vendor/maplibre-native/include
+  ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/src
+  ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/vendor/metal-cpp
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${GLES3_INCLUDE_DIRS}
 )
 
 # Link libraries. Linking Slint::Slint will also propagate include dirs and other usage requirements.
 target_link_libraries(maplibre-slint-example
-    PRIVATE
-        Slint::Slint
-        mbgl-core
-        cpr::cpr
-        ${GLES3_LIBRARIES}
-        ${OPENGL_LIBRARIES}
-        $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
+  PRIVATE
+    Slint::Slint
+    mbgl-core
+    cpr::cpr
+    $<$<BOOL:${GLES3_LIBRARIES}>:${GLES3_LIBRARIES}>
+    $<$<NOT:$<AND:$<PLATFORM_ID:Darwin>,$<BOOL:${BUILD_METAL_ONLY}>>>:${OPENGL_LIBRARIES}>
+    $<$<PLATFORM_ID:Darwin>:${OPENGL_LIBRARIES}>
+    $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
+    $<$<PLATFORM_ID:Darwin>:${APPKIT_FRAMEWORK}>
+    $<$<PLATFORM_ID:Darwin>:${QUARTZCORE_FRAMEWORK}>
 )
+
+if(APPLE)
+  # Ensure dependent dylibs (like cpr) are discoverable at runtime from build tree
+  set_target_properties(maplibre-slint-example PROPERTIES
+      BUILD_RPATH "@loader_path;@loader_path/../vendor/cpr/cpr/Debug;@executable_path"
+      INSTALL_RPATH "@loader_path;@executable_path/../lib")
+endif()
+
+if(APPLE)
+  message(STATUS "Building with Metal zero-copy backend sources")
+  set(METAL_SOURCES
+    src/metal/slint_metal_maplibre.mm
+    src/metal/slint_metal_renderer_backend.mm
+  src/metal/metal_cpp_symbols.mm
+  )
+  foreach(src ${METAL_SOURCES})
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+      target_sources(maplibre-slint-example PRIVATE ${src})
+      set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS "-fobjc-arc -frtti")
+    endif()
+  endforeach()
+  target_compile_definitions(maplibre-slint-example PRIVATE SLINT_MAPLIBRE_USE_METAL=1)
+  if(BUILD_METAL_ONLY)
+    target_compile_definitions(maplibre-slint-example PRIVATE SLINT_METAL_ONLY=1)
+  endif()
+  # Explicit macOS frameworks needed for winit keyboard APIs (Carbon/HIToolbox) & TIS functions
+  target_link_libraries(maplibre-slint-example PRIVATE "-framework Carbon" "-framework ApplicationServices")
+endif()
 
 # On Windows, copy the Slint DLL next to the application binary so that it's found
 if (WIN32)
@@ -215,4 +291,13 @@ enable_testing()
 
 if(BUILD_TESTS)
     add_subdirectory(tests)
+endif()
+
+# Convenience target to build and run the Metal example (macOS only)
+if(APPLE)
+  add_custom_target(run-macos-metal
+    COMMAND "$<TARGET_FILE:maplibre-slint-example>"
+    DEPENDS maplibre-slint-example
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running Metal zero-copy MapLibre + Slint example")
 endif()

@@ -239,9 +239,21 @@ int main(int argc, char** argv) {
                         
                         if (metalView) {
                             // Update the Metal view frame to match the map area
+                            CGFloat windowHeight = window.contentView.bounds.size.height;
+                            CGFloat controlsHeight = windowHeight - h;  // Controls take up the difference
+                            
                             NSRect mapFrame;
                             mapFrame.origin.x = 0;
-                            mapFrame.origin.y = 0;  // Map at bottom in macOS coordinates
+                            
+                            // Check if the coordinate system is flipped (it should be)
+                            if (window.contentView.isFlipped) {
+                                // If flipped, y=0 is at top, so map should start after controls
+                                mapFrame.origin.y = controlsHeight;  // Start after controls
+                            } else {
+                                // If not flipped, y=0 is at bottom (standard macOS)
+                                mapFrame.origin.y = 0;  // Bottom of window
+                            }
+                            
                             mapFrame.size.width = window.contentView.bounds.size.width;
                             mapFrame.size.height = h;  // Use the actual map height from Slint
                             metalView.frame = mapFrame;
@@ -254,6 +266,9 @@ int main(int argc, char** argv) {
                     }
                 }
                 std::cout << "[main] Resized maplibre surface to " << w << "x" << h << std::endl;
+                
+                // Request a frame update to repaint after resize
+                MetalFrameSchedulerCFRunLoop::request(slint_map_libre);
             }
         }
     });

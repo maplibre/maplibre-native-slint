@@ -1,42 +1,86 @@
+// Metal-only example entry point (CPU fallback removed)
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <atomic>
+#include <optional>
+#include <CoreFoundation/CoreFoundation.h>
+#include <mach/mach_time.h>
+#include <dispatch/dispatch.h>
 
 #include "map_window.h"
-#include "slint_maplibre.hpp"
+#include "metal/slint_metal_maplibre.hpp"
 
 int main(int argc, char** argv) {
     std::cout << "[main] Starting application" << std::endl;
     auto main_window = MapWindow::create();
-    auto slint_map_libre = std::make_shared<SlintMapLibre>();
+    std::cout << "[main] Using Metal zero-copy backend (CPU headless path removed)" << std::endl;
+    auto slint_map_libre = std::make_shared<slint_metal::SlintMetalMapLibre>();
 
     // Delay initialization until a non-zero window size is known
     auto initialized = std::make_shared<bool>(false);
-    const auto size = main_window->get_window_size();
-    std::cout << "Initial Window Size: " << static_cast<int>(size.width) << "x"
-              << static_cast<int>(size.height) << std::endl;
+    // Initial size (not printing due to potential macOS MacTypes::Size name clash)
+    (void)main_window->get_window_size();
 
-    // This function is ONLY for rendering. It will be called by the observer.
-    auto render_function = [=]() {
-        std::cout << "Rendering map..." << std::endl;
-        auto image = slint_map_libre->render_map();
-        main_window->global<MapAdapter>().set_map_texture(image);
-    };
-
-    // Pass the render function to SlintMapLibre, which will pass it to the
-    // observer.
-    slint_map_libre->setRenderCallback(render_function);
+    // No CPU screenshot path remains.
 
     // The timer in .slint file will trigger this callback periodically.
     // This callback drives the MapLibre run loop and, if needed, performs
     // rendering on the UI thread.
-    main_window->global<MapAdapter>().on_tick_map_loop([=]() {
-        slint_map_libre->run_map_loop();
-        if (slint_map_libre->take_repaint_request() ||
-            slint_map_libre->consume_forced_repaint()) {
-            render_function();
+    // --- Frame Scheduler (Metal path) ---------------------------------------------------------
+    struct MetalFrameSchedulerCFRunLoop {
+        static std::atomic<bool>& needFrame() { static std::atomic<bool> v{false}; return v; }
+        static std::atomic<bool>& rendering() { static std::atomic<bool> v{false}; return v; }
+        static std::weak_ptr<slint_metal::SlintMetalMapLibre>& weakMap() { static std::weak_ptr<slint_metal::SlintMetalMapLibre> w; return w; }
+        static CFRunLoopObserverRef& observer() { static CFRunLoopObserverRef o = nullptr; return o; }
+        static std::atomic<uint64_t>& lastFrameNS() { static std::atomic<uint64_t> v{0}; return v; }
+        static constexpr uint64_t targetIntervalNS = 16'666'666ull; // 60Hz
+
+        static void setup(const std::shared_ptr<slint_metal::SlintMetalMapLibre>& map) {
+            weakMap() = map;
+            if (observer() == nullptr) {
+                CFRunLoopObserverContext ctx{}; // no custom info needed
+                observer() = CFRunLoopObserverCreate(nullptr,
+                                                     kCFRunLoopBeforeWaiting | kCFRunLoopAfterWaiting,
+                                                     true,
+                                                     INT_MAX, // low priority
+                                                     [](CFRunLoopObserverRef, CFRunLoopActivity, void*) {
+                                                         auto sp = weakMap().lock();
+                                                         if (!sp) return;
+                                                         // Only render if a frame was requested and we are not already rendering.
+                                                         if (!needFrame().exchange(false, std::memory_order_acq_rel)) return;
+                                                         bool expected = false;
+                                                         if (!rendering().compare_exchange_strong(expected, true)) {
+                                                             // Someone else rendering; request another.
+                                                             needFrame().store(true, std::memory_order_relaxed);
+                                                             return;
+                                                         }
+                                                         // Frame pacing (simple): enforce minimum interval.
+                                                         uint64_t now = mach_absolute_time();
+                                                         uint64_t last = lastFrameNS().load(std::memory_order_relaxed);
+                                                         if (last != 0 && (now - last) < targetIntervalNS / 2) {
+                                                             // Too soon; defer to next loop.
+                                                             needFrame().store(true, std::memory_order_relaxed);
+                                                             rendering().store(false, std::memory_order_relaxed);
+                                                             return;
+                                                         }
+                                                         sp->render_once();
+                                                         lastFrameNS().store(now, std::memory_order_relaxed);
+                                                         rendering().store(false, std::memory_order_relaxed);
+                                                     },
+                                                     &ctx);
+                CFRunLoopAddObserver(CFRunLoopGetMain(), observer(), kCFRunLoopCommonModes);
+            }
         }
-    });
+
+        static void request(const std::shared_ptr<slint_metal::SlintMetalMapLibre>& map) {
+            setup(map);
+            needFrame().store(true, std::memory_order_relaxed);
+        }
+    };
+
+    // Tick only signals that a frame is desired; actual render happens after current event processing finishes.
+    main_window->global<MapAdapter>().on_tick_map_loop([=]() { MetalFrameSchedulerCFRunLoop::request(slint_map_libre); });
 
     main_window->global<MapAdapter>().on_style_changed(
         [=](const slint::SharedString& url) {
@@ -75,17 +119,13 @@ int main(int argc, char** argv) {
 
     // Initialize/resize MapLibre to match the map image area
     main_window->on_map_size_changed([=]() {
-        const auto s = main_window->get_map_size();
-        const int w = static_cast<int>(s.width);
-        const int h = static_cast<int>(s.height);
+    auto s = main_window->get_map_size();
+    int w = static_cast<int>(s.width);
+    int h = static_cast<int>(s.height);
         std::cout << "Map Area Size Changed: " << w << "x" << h << std::endl;
         if (w > 0 && h > 0) {
-            if (!*initialized) {
-                slint_map_libre->initialize(w, h);
-                *initialized = true;
-            } else {
-                slint_map_libre->resize(w, h);
-            }
+            if (!*initialized) { slint_map_libre->initialize(w, h, 1.0f); *initialized = true; }
+            else { slint_map_libre->resize(w, h, 1.0f); }
         }
     });
 

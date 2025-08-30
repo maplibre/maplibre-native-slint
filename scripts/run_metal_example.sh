@@ -5,7 +5,7 @@ CONFIG=${2:-Debug}
 GEN=${GEN:-Ninja}
 
 if [[ ! -d "$BUILD_DIR" ]]; then
-  cmake -S . -B "$BUILD_DIR" -G "$GEN" -DCMAKE_BUILD_TYPE=$CONFIG -DBUILD_METAL_ONLY=ON
+  cmake -S . -B "$BUILD_DIR" -G "$GEN" -DCMAKE_BUILD_TYPE=$CONFIG -DMLN_WITH_METAL=ON
 fi
 cmake --build "$BUILD_DIR" --target maplibre-slint-example -j
 if [[ -x "$BUILD_DIR/maplibre-slint-example" ]]; then

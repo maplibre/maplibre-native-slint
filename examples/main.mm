@@ -136,18 +136,69 @@ int main(int argc, char** argv) {
                         std::cout << "[main] Metal layer: " << (metalLayer ? "yes" : "no") << std::endl;
                         if (metalLayer) {
                             std::cout << "[main] Creating Metal view..." << std::endl;
+                            std::cout << "[main] Window content bounds: " << window.contentView.bounds.size.width 
+                                      << "x" << window.contentView.bounds.size.height << std::endl;
+                            std::cout << "[main] Map size from Slint: " << w << "x" << h << std::endl;
+                            std::cout << "[main] ContentView isFlipped: " << (window.contentView.isFlipped ? "YES" : "NO") << std::endl;
+                            
+                            // Calculate the frame for the map area only (not the entire window)
+                            // Slint lays out: controls at top (~82px), map below (518px of 600px total)
+                            // The black area at bottom in the screenshot is where Slint's map Rectangle is
+                            // We need to position our Metal view to match that location
+                            
+                            CGFloat windowHeight = window.contentView.bounds.size.height;
+                            CGFloat controlsHeight = windowHeight - h;  // Controls take up the difference
+                            
+                            NSRect mapFrame;
+                            mapFrame.origin.x = 0;
+                            
+                            // Check if the coordinate system is flipped
+                            if (window.contentView.isFlipped) {
+                                // If flipped, y=0 is at top, so map should start after controls
+                                mapFrame.origin.y = controlsHeight;  // Start after controls
+                            } else {
+                                // If not flipped, y=0 is at bottom (standard macOS)
+                                mapFrame.origin.y = 0;  // Bottom of window
+                            }
+                            
+                            mapFrame.size.width = window.contentView.bounds.size.width;
+                            mapFrame.size.height = h;  // Map height (518px)
+                            
+                            std::cout << "[main] Positioning map: y=" << mapFrame.origin.y 
+                                      << " height=" << mapFrame.size.height 
+                                      << " (controls height=" << controlsHeight << ")" << std::endl;
+                            
                             // Create a dedicated NSView for the Metal layer
-                            NSView* metalView = [[NSView alloc] initWithFrame:window.contentView.bounds];
+                            NSView* metalView = [[NSView alloc] initWithFrame:mapFrame];
                             metalView.wantsLayer = YES;
-                            metalView.layer = metalLayer;
                             metalView.layerContentsRedrawPolicy = NSViewLayerContentsRedrawOnSetNeedsDisplay;
                             metalView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
                             
-                            // Add the Metal view as a subview
-                            [window.contentView addSubview:metalView];
+                            // Check existing subviews
+                            NSArray* subviews = window.contentView.subviews;
+                            std::cout << "[main] Existing subviews count: " << subviews.count << std::endl;
+                            
+                            // Find if there's a Slint view we should position relative to
+                            NSView* slintView = nil;
+                            if (subviews.count > 0) {
+                                slintView = subviews[0];  // Slint's view should be the first one
+                                std::cout << "[main] Found existing view frame: " 
+                                          << slintView.frame.origin.x << "," << slintView.frame.origin.y 
+                                          << " size: " << slintView.frame.size.width << "x" << slintView.frame.size.height << std::endl;
+                            }
+                            
+                            // Set the Metal layer on the view
+                            metalView.layer = metalLayer;
+                            
+                            // Slint uses winit which renders to a CAMetalLayer
+                            // We need to insert our Metal view at the correct position
+                            // The black area at bottom is Slint's transparent Rectangle where map should be
+                            
+                            // Insert the Metal view behind Slint's content
+                            [window.contentView addSubview:metalView positioned:NSWindowBelow relativeTo:nil];
                             
                             std::cout << "[main] Setting frame..." << std::endl;
-                            // Position the Metal layer to cover the entire view
+                            // Position the Metal layer within its view
                             metalLayer.frame = metalView.bounds;
                             metalLayer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
                             
@@ -174,14 +225,32 @@ int main(int argc, char** argv) {
                 *initialized = true;
             } else {
                 slint_map_libre->resize(w,h,dpr);
-                // Update Metal layer frame on resize
-                if (window && window.contentView.layer.sublayers.count > 0) {
-                    CALayer* metalLayer = window.contentView.layer.sublayers[0];
-                    if ([metalLayer isKindOfClass:[CAMetalLayer class]]) {
-                        metalLayer.frame = window.contentView.bounds;
-                        // Update contents scale and drawable size for HiDPI
-                        ((CAMetalLayer*)metalLayer).contentsScale = dpr;
-                        ((CAMetalLayer*)metalLayer).drawableSize = CGSizeMake(w * dpr, h * dpr);
+                // Update Metal view frame on resize
+                if (window && window.contentView.subviews.count > 0) {
+                    @autoreleasepool {
+                        // Find the Metal view (should be the last subview we added)
+                        NSView* metalView = nil;
+                        for (NSView* view in window.contentView.subviews) {
+                            if (view.layer && [view.layer isKindOfClass:[CAMetalLayer class]]) {
+                                metalView = view;
+                                break;
+                            }
+                        }
+                        
+                        if (metalView) {
+                            // Update the Metal view frame to match the map area
+                            NSRect mapFrame;
+                            mapFrame.origin.x = 0;
+                            mapFrame.origin.y = 0;  // Map at bottom in macOS coordinates
+                            mapFrame.size.width = window.contentView.bounds.size.width;
+                            mapFrame.size.height = h;  // Use the actual map height from Slint
+                            metalView.frame = mapFrame;
+                            
+                            // Update the Metal layer properties
+                            CAMetalLayer* metalLayer = (CAMetalLayer*)metalView.layer;
+                            metalLayer.contentsScale = dpr;
+                            metalLayer.drawableSize = CGSizeMake(w * dpr, h * dpr);
+                        }
                     }
                 }
                 std::cout << "[main] Resized maplibre surface to " << w << "x" << h << std::endl;

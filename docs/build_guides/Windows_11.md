@@ -80,7 +80,7 @@ cmake -S . -B build-ninja -G "Ninja" ^
 ## 5) Build
 
 ```bat
-cmake --build build-ninja
+cmake --build build-ninja -j
 ```
 
 ---

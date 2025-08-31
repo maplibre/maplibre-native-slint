@@ -65,8 +65,12 @@ set VCPKG_OVERLAY_TRIPLETS=%cd%\vendor\maplibre-native\platform\windows\vendor\v
 > The project uses **vcpkg manifest mode**. You **don’t** need to pass package names to `vcpkg install`; CMake will drive vcpkg using `vcpkg.json`.
 
 ```bat
+rmdir /s /q build-ninja
+
 cmake -S . -B build-ninja -G "Ninja" ^
   -DCMAKE_BUILD_TYPE=Release ^
+  -DMLNS_WITH_SLINT_GL=ON ^
+  -DMLNS_FORCE_FETCH_SLINT=ON ^
   -DCMAKE_TOOLCHAIN_FILE=C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake ^
   -DVCPKG_TARGET_TRIPLET=x64-windows ^
   -DVCPKG_HOST_TRIPLET=x64-windows
@@ -90,8 +94,7 @@ cmake --build build-ninja -j
 The example app and DLLs are placed in the build directory:
 
 ```bat
-cd build-ninja
-maplibre-slint-example.exe
+set MLNS_USE_GL=1 && build-ninja\maplibre-slint-example.exe
 ```
 
 ---

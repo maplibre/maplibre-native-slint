@@ -14,12 +14,20 @@ Under no circumstances is the agent permitted to execute commands using `sudo`. 
 
 When making changes to C++ files (`.cpp`, `.hpp`), it is mandatory to run `clang-format` to ensure code style consistency.
 
-**Important:** The `vendor`, `build`, and `.git` directories must be excluded from formatting.
+**Important:** Exclude the following directories from formatting: `vendor/`, `build/`, `build-ninja/`, and `.git/`.
 
 You can format all relevant files using the following command:
 
 ```bash
-find . -name "*.cpp" -o -name "*.hpp" | grep -v "^./vendor/" | grep -v "^./build/" | grep -v "^./.git/" | xargs clang-format -i
+find . \( -name "*.cpp" -o -name "*.hpp" \) \
+  | grep -v -E "^\./(vendor|build|build-ninja|\.git)/" \
+  | xargs clang-format -i
+```
+
+Alternatively, run the helper script:
+
+```bash
+./scripts/format-cpp.sh
 ```
 
 ## Build and Run (macOS)

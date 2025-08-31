@@ -5,6 +5,7 @@ build-*/
 build-ninja/
 
 .cache
+cache.sqlite-journal
 CMakeCache.txt
 CMakeFiles/
 CMakeScripts/

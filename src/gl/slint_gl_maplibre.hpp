@@ -223,6 +223,8 @@ private:
     std::unique_ptr<SlintGLBackend> backend;
     std::unique_ptr<SlintRendererFrontend> frontend;
     std::unique_ptr<mbgl::Map> map;
+    std::string style_url_{};
+    bool thread_owns_map_ = false;
 
     int width = 0;
     int height = 0;
@@ -242,7 +244,9 @@ private:
 
     void* slint_hdc_ = nullptr;    // HDC (from wglGetCurrentDC)
     void* slint_hglrc_ = nullptr;  // HGLRC (from wglGetCurrentContext)
-    void* map_hglrc_ = nullptr;    // isolated HGLRC
+    void* map_hglrc_ = nullptr;    // isolated HGLRC (dedicated thread)
+    void* iso_hdc_ = nullptr;      // isolated HDC (hidden window)
+    void* iso_hwnd_ = nullptr;     // hidden HWND
     // isolated uses its own FBO to attach the shared texture
     uint32_t iso_fbo_ = 0;
     uint32_t iso_depth_rb_ = 0;
@@ -253,6 +257,7 @@ private:
     std::mutex iso_mu_;
     std::condition_variable iso_cv_;
     bool iso_stop_ = false;
+    bool iso_ready_ = false; // thread created HDC/HGLRC and loader
     struct IsoReq {
         uint32_t tex = 0;
         int w = 0;
@@ -260,6 +265,8 @@ private:
         uint64_t seq = 0;
     } iso_req_{};
     uint64_t iso_done_seq_ = 0;
+    uint64_t iso_last_sent_seq_ = 0;
+    int iso_miss_count_ = 0;
 #endif
 };
 

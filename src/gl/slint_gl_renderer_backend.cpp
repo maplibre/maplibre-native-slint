@@ -27,31 +27,84 @@ using namespace std;
 namespace mlns {
 
 #ifdef _WIN32
-// Minimal loader for GL symbols (prefer wglGetProcAddress for extensions)
+// Minimal loader for GL/ES symbols with ANGLE/EGL fallback
 static FARPROC load_gl_proc(const char* name) {
-    HMODULE lib = GetModuleHandleA("opengl32.dll");
-    FARPROC p = nullptr;
-    // Try wglGetProcAddress for core+extension function pointers
-    if (lib) {
-        using PFNWGLGETPROCADDRESSPROC = PROC(WINAPI*)(LPCSTR);
-        auto wglGetProcAddress_fn = reinterpret_cast<PFNWGLGETPROCADDRESSPROC>(
-            GetProcAddress(lib, "wglGetProcAddress"));
-        if (wglGetProcAddress_fn) {
-            p = reinterpret_cast<FARPROC>(wglGetProcAddress_fn(name));
-            // Invalid return values per WGL spec
-            if (p == reinterpret_cast<FARPROC>(1) ||
-                p == reinterpret_cast<FARPROC>(2) ||
-                p == reinterpret_cast<FARPROC>(3) ||
-                p == reinterpret_cast<FARPROC>(-1)) {
-                p = nullptr;
-            }
+    using PFNWGLGETCURRENTCONTEXTPROC = HGLRC(WINAPI*)();
+    static PFNWGLGETCURRENTCONTEXTPROC p_wglGetCurrentContext = nullptr;
+    if (!p_wglGetCurrentContext) {
+        HMODULE gl = GetModuleHandleA("opengl32.dll");
+        if (gl) {
+            p_wglGetCurrentContext =
+                reinterpret_cast<PFNWGLGETCURRENTCONTEXTPROC>(
+                    GetProcAddress(gl, "wglGetCurrentContext"));
         }
     }
-    // Fallback to opengl32 exports (GL 1.1)
-    if (!p && lib) {
-        p = GetProcAddress(lib, name);
+    const bool have_wgl =
+        p_wglGetCurrentContext && p_wglGetCurrentContext() != nullptr;
+    auto bad_ptr = [](FARPROC p) {
+        return p == reinterpret_cast<FARPROC>(1) ||
+               p == reinterpret_cast<FARPROC>(2) ||
+               p == reinterpret_cast<FARPROC>(3) ||
+               p == reinterpret_cast<FARPROC>(-1);
+    };
+    if (have_wgl) {
+        HMODULE lib = GetModuleHandleA("opengl32.dll");
+        FARPROC p = nullptr;
+        if (lib) {
+            using PFNWGLGETPROCADDRESSPROC = PROC(WINAPI*)(LPCSTR);
+            auto wglGetProcAddress_fn =
+                reinterpret_cast<PFNWGLGETPROCADDRESSPROC>(
+                    GetProcAddress(lib, "wglGetProcAddress"));
+            if (wglGetProcAddress_fn) {
+                p = reinterpret_cast<FARPROC>(wglGetProcAddress_fn(name));
+                if (bad_ptr(p))
+                    p = nullptr;
+            }
+            if (!p)
+                p = GetProcAddress(lib, name);
+        }
+        return p;
     }
-    return p;
+    auto env_truthy = [](const char* v) {
+        if (!v)
+            return false;
+        std::string s(v);
+        for (auto& c : s)
+            c = (char)tolower((unsigned char)c);
+        return (s == "1" || s == "true" || s == "on" || s == "yes");
+    };
+    if (env_truthy(std::getenv("MLNS_FORCE_DESKTOP_GL"))) {
+        return nullptr;
+    }
+    using PFNEGLGETPROCADDRESSPROC = void*(WINAPI*)(const char*);
+    static PFNEGLGETPROCADDRESSPROC p_eglGetProcAddress = nullptr;
+    static bool egl_loaded = false;
+    if (!egl_loaded) {
+        HMODULE egl = GetModuleHandleA("libEGL.dll");
+        if (!egl)
+            egl = GetModuleHandleA("EGL.dll");
+        if (!egl)
+            egl = LoadLibraryA("libEGL.dll");
+        if (!egl)
+            egl = LoadLibraryA("EGL.dll");
+        if (egl)
+            p_eglGetProcAddress = reinterpret_cast<PFNEGLGETPROCADDRESSPROC>(
+                GetProcAddress(egl, "eglGetProcAddress"));
+        egl_loaded = true;
+    }
+    void* vp = nullptr;
+    HMODULE gles = GetModuleHandleA("libGLESv2.dll");
+    if (!gles)
+        gles = GetModuleHandleA("GLESv2.dll");
+    if (!gles)
+        gles = LoadLibraryA("libGLESv2.dll");
+    if (!gles)
+        gles = LoadLibraryA("GLESv2.dll");
+    if (gles)
+        vp = reinterpret_cast<void*>(GetProcAddress(gles, name));
+    if (!vp && p_eglGetProcAddress)
+        vp = p_eglGetProcAddress(name);
+    return reinterpret_cast<FARPROC>(vp);
 }
 
 // Ultra-safe mode stubs (duplicated with internal linkage)
@@ -170,44 +223,13 @@ mbgl::gl::ProcAddress SlintGLBackend::getExtensionFunctionPointer(
         return 0;
     }();
     if (safe_mode_level >= 1) {
+        // Level 1: Disable only debug output related APIs
         static const char* deny[] = {"glDebugMessageControl",
                                      "glDebugMessageCallback",
                                      "glDebugMessageControlARB",
                                      "glDebugMessageCallbackARB",
-                                     "glBindVertexArray",
-                                     "glGenVertexArrays",
-                                     "glDeleteVertexArrays",
-                                     "glVertexAttribDivisor",
-                                     "glDrawArraysInstanced",
-                                     "glDrawElementsInstanced",
-                                     "glTexStorage2D",
-                                     "glTexStorage3D",
-                                     "glInvalidateFramebuffer",
-                                     "glInvalidateSubFramebuffer",
-                                     "glMapBufferRange",
-                                     "glFlushMappedBufferRange",
-                                     "glCreateBuffers",
-                                     "glNamedBufferData",
-                                     "glNamedBufferSubData",
-                                     "glMapNamedBufferRange",
-                                     "glFlushMappedNamedBufferRange",
-                                     "glCreateVertexArrays",
-                                     "glVertexArrayVertexBuffer",
-                                     "glVertexArrayAttribFormat",
-                                     "glEnableVertexArrayAttrib",
-                                     "glVertexArrayAttribBinding",
-                                     "glVertexArrayElementBuffer",
-                                     "glCreateFramebuffers",
-                                     "glNamedFramebufferTexture",
-                                     "glNamedFramebufferRenderbuffer",
-                                     "glCheckNamedFramebufferStatus",
-                                     "glCreateRenderbuffers",
-                                     "glNamedRenderbufferStorage",
-                                     "glFenceSync",
-                                     "glClientWaitSync",
-                                     "glWaitSync",
-                                     "glDeleteSync",
-                                     "glBindFragDataLocation",
+                                     "glPushDebugGroup",
+                                     "glPopDebugGroup",
                                      nullptr};
         for (int i = 0; deny[i]; ++i) {
             if (std::strcmp(name, deny[i]) == 0) {
@@ -236,14 +258,7 @@ mbgl::gl::ProcAddress SlintGLBackend::getExtensionFunctionPointer(
             return reinterpret_cast<mbgl::gl::ProcAddress>(
                 stub_glFlushMappedBufferRange);
     }
-    if (std::strcmp(name, "glDebugMessageControl") == 0 ||
-        std::strcmp(name, "glDebugMessageCallback") == 0 ||
-        std::strcmp(name, "glDebugMessageControlARB") == 0 ||
-        std::strcmp(name, "glDebugMessageCallbackARB") == 0 ||
-        std::strcmp(name, "glPushDebugGroup") == 0 ||
-        std::strcmp(name, "glPopDebugGroup") == 0) {
-        return nullptr;
-    }
+    // No unconditional deny beyond safe-mode handling
     auto p = load_gl_proc(name);
     return reinterpret_cast<mbgl::gl::ProcAddress>(p);
 #else

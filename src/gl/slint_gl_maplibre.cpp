@@ -15,6 +15,9 @@
 static bool is_executable_ptr(const void* p);
 static bool looks_like_vftable(const void* vft_ptr);
 #ifdef _WIN32
+static void log_vftable(const char* tag, const void* vft_ptr);
+#endif
+#ifdef _WIN32
 enum VptrGuardMode { GUARD_OFF = 0, GUARD_WARN = 1, GUARD_STRICT = 2 };
 static int get_vptr_guard_mode() {
     static int mode = []() {
@@ -768,42 +771,30 @@ void SlintZeroCopyGL::attach(slint::Window& window,
 // Controller
 namespace mlns {
 SlintGLMapLibre::SlintGLMapLibre() = default;
-SlintGLMapLibre::~SlintGLMapLibre() = default;
+SlintGLMapLibre::~SlintGLMapLibre() {
+#ifdef _WIN32
+    {
+        std::lock_guard<std::mutex> lk(iso_mu_);
+        iso_stop_ = true;
+    }
+    iso_cv_.notify_all();
+    if (iso_thread_.joinable())
+        iso_thread_.join();
+#endif
+}
 
 void SlintGLMapLibre::initialize(int w, int h) {
     std::cout << "[SlintGLMapLibre] initialize " << w << "x" << h << std::endl;
     width = w;
     height = h;
-    if (!run_loop)
-        run_loop = std::make_unique<mbgl::util::RunLoop>();
-
-    backend = std::make_unique<SlintGLBackend>(mbgl::gfx::ContextMode::Unique);
-    backend->setSize(
-        mbgl::Size{static_cast<uint32_t>(w), static_cast<uint32_t>(h)});
-
-    auto rnd = std::make_unique<mbgl::Renderer>(*backend, 1.0f);
-    frontend =
-        std::make_unique<SlintRendererFrontend>(std::move(rnd), *backend);
-
-    mbgl::ResourceOptions resourceOptions;
-    resourceOptions.withCachePath("cache.sqlite").withAssetPath(".");
-
-    map =
-        std::make_unique<mbgl::Map>(*frontend, *this,
-                                    mbgl::MapOptions()
-                                        .withMapMode(mbgl::MapMode::Continuous)
-                                        .withSize(backend->getSize())
-                                        .withPixelRatio(1.0f),
-                                    resourceOptions);
-
-    // Default or environment-specified style
+    // Record style URL (used by thread-owned path or immediate init)
     if (const char* env_style = std::getenv("MLNS_STYLE_URL");
         env_style && *env_style) {
+        style_url_ = env_style;
         std::cout << "[SlintGLMapLibre] Using MLNS_STYLE_URL=" << env_style
                   << std::endl;
-        map->getStyle().loadURL(env_style);
     } else {
-        map->getStyle().loadURL("https://demotiles.maplibre.org/style.json");
+        style_url_ = "https://demotiles.maplibre.org/style.json";
     }
 
 #ifdef _WIN32
@@ -817,7 +808,30 @@ void SlintGLMapLibre::initialize(int w, int h) {
             c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
         return !(s == "0" || s == "false" || s == "off" || s == "no");
     }();
+    if (isolate_ctx_) {
+        // Defer MapLibre object creation to the isolated render thread
+        thread_owns_map_ = true;
+        return;
+    }
 #endif
+    if (!run_loop)
+        run_loop = std::make_unique<mbgl::util::RunLoop>();
+    backend = std::make_unique<SlintGLBackend>(mbgl::gfx::ContextMode::Unique);
+    backend->setSize(
+        mbgl::Size{static_cast<uint32_t>(w), static_cast<uint32_t>(h)});
+    auto rnd = std::make_unique<mbgl::Renderer>(*backend, 1.0f);
+    frontend =
+        std::make_unique<SlintRendererFrontend>(std::move(rnd), *backend);
+    mbgl::ResourceOptions resourceOptions;
+    resourceOptions.withCachePath("cache.sqlite").withAssetPath(".");
+    map =
+        std::make_unique<mbgl::Map>(*frontend, *this,
+                                    mbgl::MapOptions()
+                                        .withMapMode(mbgl::MapMode::Continuous)
+                                        .withSize(backend->getSize())
+                                        .withPixelRatio(1.0f),
+                                    resourceOptions);
+    map->getStyle().loadURL(style_url_);
 }
 
 void SlintGLMapLibre::resize(int w, int h) {
@@ -957,6 +971,14 @@ void SlintGLMapLibre::render_to_fbo(uint32_t fbo, int w, int h) {
     while (glGetError() != 0) {
     }
     gl_check("before MapLibre render");
+#ifdef _MSC_VER
+    auto prev_seh =
+        _set_se_translator([](unsigned int code, _EXCEPTION_POINTERS*) {
+            char msg[64];
+            std::snprintf(msg, sizeof(msg), "SEH 0x%08X", code);
+            throw std::runtime_error(msg);
+        });
+#endif
     try {
         frontend->render();
     } catch (const std::exception& e) {
@@ -966,6 +988,9 @@ void SlintGLMapLibre::render_to_fbo(uint32_t fbo, int w, int h) {
         LOGE("[SlintGLMapLibre] frontend->render threw unknown exception");
         return;
     }
+#ifdef _MSC_VER
+    _set_se_translator(prev_seh);
+#endif
     LOGI("[SlintGLMapLibre] MapLibre render returned");
     gl_check("after MapLibre render");
     if (first_render_) {
@@ -981,6 +1006,10 @@ void SlintGLMapLibre::render_to_texture(uint32_t texture, int w, int h) {
 #ifdef _WIN32
     if (isolate_ctx_) {
         ensure_isolated_context_created();
+        if (map_hglrc_) {
+            request_isolated_render(texture, w, h);
+            return;
+        }
         if (!map_hglrc_ || !p_wglGetCurrentContext || !p_wglGetCurrentDC ||
             !p_wglMakeCurrent) {
             return;
@@ -1203,22 +1232,191 @@ void SlintGLMapLibre::ensure_isolated_context_created() {
     slint_hdc_ = p_wglGetCurrentDC();
     if (!slint_hglrc_ || !slint_hdc_)
         return;
-    HDC hdc = static_cast<HDC>(slint_hdc_);
-    HGLRC newrc = p_wglCreateContext(hdc);
-    if (!newrc)
+    if (!iso_thread_.joinable()) {
+        iso_stop_ = false;
+        iso_ready_ = false;
+        iso_thread_ =
+            std::thread([this]() { this->isolated_render_thread_main(); });
+        // wait up to 1s for ready
+        std::unique_lock<std::mutex> lk(iso_mu_);
+        iso_cv_.wait_for(lk, std::chrono::milliseconds(1000),
+                         [this] { return iso_ready_; });
+    }
+}
+
+void SlintGLMapLibre::request_isolated_render(uint32_t tex, int w, int h) {
+    std::lock_guard<std::mutex> lk(iso_mu_);
+    iso_req_.tex = tex;
+    iso_req_.w = w;
+    iso_req_.h = h;
+    iso_req_.seq++;
+    iso_cv_.notify_one();
+}
+
+void SlintGLMapLibre::isolated_render_thread_main() {
+    if (!p_wglMakeCurrent || !p_wglCreateContext || !p_wglShareLists)
         return;
-    if (!p_wglShareLists(static_cast<HGLRC>(slint_hglrc_), newrc)) {
-        p_wglDeleteContext(newrc);
+    // Create hidden window and its HDC for this thread
+    WNDCLASSW wc{};
+    wc.lpfnWndProc = DefWindowProcW;
+    wc.hInstance = GetModuleHandleW(nullptr);
+    wc.lpszClassName = L"MLNS_IsoWin";
+    RegisterClassW(&wc);
+    HWND hwnd = CreateWindowExW(
+        0, wc.lpszClassName, L"mlns_iso", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+        CW_USEDEFAULT, 16, 16, nullptr, nullptr, wc.hInstance, nullptr);
+    if (!hwnd) {
+        LOGE("[IsoInit] CreateWindowExW failed");
         return;
     }
-    map_hglrc_ = newrc;
+    HDC hdc = GetDC(hwnd);
+    if (!hdc) {
+        LOGE("[IsoInit] GetDC failed");
+        return;
+    }
+    PIXELFORMATDESCRIPTOR pfd{};
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 24;
+    pfd.cDepthBits = 24;
+    pfd.cStencilBits = 8;
+    int pf = ChoosePixelFormat(hdc, &pfd);
+    if (pf == 0 || !SetPixelFormat(hdc, pf, &pfd)) {
+        ReleaseDC(hwnd, hdc);
+        DestroyWindow(hwnd);
+        LOGE("[IsoInit] SetPixelFormat failed");
+        return;
+    }
+    // Create RC and share with UI RC
+    HGLRC rc = p_wglCreateContext(hdc);
+    if (!rc) {
+        ReleaseDC(hwnd, hdc);
+        DestroyWindow(hwnd);
+        LOGE("[IsoInit] wglCreateContext failed");
+        return;
+    }
+    if (!p_wglShareLists(static_cast<HGLRC>(slint_hglrc_), rc)) {
+        p_wglDeleteContext(rc);
+        ReleaseDC(hwnd, hdc);
+        DestroyWindow(hwnd);
+        LOGE("[IsoInit] wglShareLists failed");
+        return;
+    }
+    if (!p_wglMakeCurrent(hdc, rc)) {
+        p_wglDeleteContext(rc);
+        ReleaseDC(hwnd, hdc);
+        DestroyWindow(hwnd);
+        LOGE("[IsoInit] wglMakeCurrent failed");
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lk(iso_mu_);
+        iso_hwnd_ = hwnd;
+        iso_hdc_ = hdc;
+        map_hglrc_ = rc;
+        iso_ready_ = true;
+    }
+    iso_cv_.notify_all();
+    ::ensure_gl_functions_loaded();
+    ensure_optional_gl_functions_loaded();
+    LOGI("[IsoInit] ready hwnd=" << hwnd << " hdc=" << hdc << " rc=" << rc);
+    while (true) {
+        IsoReq req;
+        {
+            std::unique_lock<std::mutex> lk(iso_mu_);
+            iso_cv_.wait(lk, [this] {
+                return iso_stop_ || iso_done_seq_ != iso_req_.seq;
+            });
+            if (iso_stop_)
+                break;
+            req = iso_req_;
+        }
+        LOGI("[IsoRender] begin seq=" << req.seq << " tex=" << req.tex
+                                      << " size=" << req.w << "x" << req.h);
+        // Prepare FBO
+        if (iso_fbo_ == 0 || iso_w_ != req.w || iso_h_ != req.h) {
+            if (iso_fbo_) {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glDeleteFramebuffers(1, &iso_fbo_);
+                iso_fbo_ = 0;
+            }
+            glGenFramebuffers(1, &iso_fbo_);
+            iso_w_ = req.w;
+            iso_h_ = req.h;
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, iso_fbo_);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_2D, req.tex, 0);
+        if (iso_depth_rb_ == 0)
+            glGenRenderbuffers(1, &iso_depth_rb_);
+        glBindRenderbuffer(GL_RENDERBUFFER, iso_depth_rb_);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, req.w,
+                              req.h);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                                  GL_RENDERBUFFER, iso_depth_rb_);
+        glViewport(0, 0, req.w, req.h);
+        if (p_glDrawBuffers) {
+            const GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
+            p_glDrawBuffers(1, bufs);
+        }
+        static GLuint s_dummy_vao = 0;
+        if (p_glGenVertexArrays && p_glBindVertexArray && s_dummy_vao == 0)
+            p_glGenVertexArrays(1, &s_dummy_vao);
+        if (p_glBindVertexArray && s_dummy_vao)
+            p_glBindVertexArray(s_dummy_vao);
 
-    // No dedicated thread: render on UI thread with temporary context switch.
-}
+        // Update backend state
+        backend->updateFramebuffer(iso_fbo_,
+                                   mbgl::Size{static_cast<uint32_t>(req.w),
+                                              static_cast<uint32_t>(req.h)});
+        backend->setSize(mbgl::Size{static_cast<uint32_t>(req.w),
+                                    static_cast<uint32_t>(req.h)});
 
-void SlintGLMapLibre::request_isolated_render(uint32_t, int, int) {
-}
-void SlintGLMapLibre::isolated_render_thread_main() {
+        // Drive MapLibre once and render
+        if (run_loop) {
+            try {
+                run_loop->runOnce();
+            } catch (...) {
+            }
+        }
+        if (map) {
+            map->triggerRepaint();
+        }
+        if (run_loop) {
+            try {
+                run_loop->runOnce();
+            } catch (...) {
+            }
+        }
+        try {
+            mbgl::gfx::BackendScope guard{
+                *backend, mbgl::gfx::BackendScope::ScopeType::Implicit};
+            frontend->render();
+        } catch (...) {
+            // skip frame
+        }
+        glFlush();
+        {
+            std::lock_guard<std::mutex> lk(iso_mu_);
+            iso_done_seq_ = req.seq;
+        }
+        LOGI("[IsoRender] end seq=" << req.seq);
+    }
+    p_wglMakeCurrent(nullptr, nullptr);
+    if (map_hglrc_) {
+        p_wglDeleteContext(static_cast<HGLRC>(map_hglrc_));
+        map_hglrc_ = nullptr;
+    }
+    if (iso_hdc_ && iso_hwnd_) {
+        ReleaseDC(static_cast<HWND>(iso_hwnd_), static_cast<HDC>(iso_hdc_));
+        iso_hdc_ = nullptr;
+    }
+    if (iso_hwnd_) {
+        DestroyWindow(static_cast<HWND>(iso_hwnd_));
+        iso_hwnd_ = nullptr;
+    }
 }
 #endif
 

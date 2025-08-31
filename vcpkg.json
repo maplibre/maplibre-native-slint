@@ -20,6 +20,7 @@
       "name": "pkgconf",
       "host": true
     },
-    "egl-registry"
+    "egl-registry",
+    "skia"
   ]
 }

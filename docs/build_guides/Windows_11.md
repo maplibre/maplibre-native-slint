@@ -71,6 +71,7 @@ cmake -S . -B build-ninja -G "Ninja" ^
   -DCMAKE_BUILD_TYPE=Release ^
   -DMLNS_WITH_SLINT_GL=ON ^
   -DMLNS_FORCE_FETCH_SLINT=ON ^
+  -DCMAKE_CXX_COMPILER_LAUNCHER=C:\ccache\ccache-4.11.3-windows-x86_64\ccache.exe ^
   -DCMAKE_TOOLCHAIN_FILE=C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake ^
   -DVCPKG_TARGET_TRIPLET=x64-windows ^
   -DVCPKG_HOST_TRIPLET=x64-windows
@@ -94,7 +95,21 @@ cmake --build build-ninja -j
 The example app and DLLs are placed in the build directory:
 
 ```bat
-set MLNS_USE_GL=1 && build-ninja\maplibre-slint-example.exe
+set MLNS_DISABLE_GL_ZEROCOPY=1
+set SLINT_RENDERER=software
+
+build-ninja\maplibre-slint-example.exe
+```
+
+or enable GL renderer:
+
+```bat
+set MLNS_DISABLE_GL_ZEROCOPY=0
+set SLINT_RENDERER=gl
+set MLNS_FORCE_DESKTOP_GL=1
+set MLNS_GL_SAFE_MODE=2
+
+build-ninja\maplibre-slint-example.exe
 ```
 
 ---

@@ -25,6 +25,7 @@ namespace mlns {
 struct GLRenderTarget {
     GLuint fbo = 0;
     GLuint color_tex = 0;
+    GLuint depth_stencil_rb = 0;
     int width = 0;
     int height = 0;
     bool valid() const {
@@ -86,14 +87,23 @@ private:
     bool resources_ready_ = false;
     int pending_w_ = 0;
     int pending_h_ = 0;
-    bool warmup_done_ =
-        false;  // skip rendering on the same frame we created RT
+    int warmup_remaining_ = 0;  // 初期化/リサイズ直後の描画見送りフレーム数
     uint64_t frame_counter_ = 0;
     bool in_render_ = false;  // guard against re-entrancy
 
     // Desired surface size (map image area). If zero, fall back to window size.
     int desired_w_ = 0;
     int desired_h_ = 0;
+
+    // Window/mapサイズの安定化判定
+    int last_w_ = 0;
+    int last_h_ = 0;
+    int size_stable_count_ = 0;
+    static constexpr int SIZE_STABLE_REQUIRED_ = 2;
+
+    enum class RenderStage { Before, After };
+    RenderStage stage_ =
+        RenderStage::After;  // default: render in AfterRendering
 };
 
 }  // namespace mlns
@@ -148,8 +158,9 @@ public:
     }
 
     void activate() override {
+        updateAssumedState();
     }
-    void deactivate() override {
+    void deactivate() override { /* no-op */
     }
 
     mbgl::gl::ProcAddress getExtensionFunctionPointer(
@@ -168,15 +179,19 @@ private:
     uint32_t fbo_ = 0;
 };
 
-class SlintMapLibreGL : public mbgl::MapObserver {
+class SlintGLMapLibre : public mbgl::MapObserver {
 public:
-    SlintMapLibreGL();
-    ~SlintMapLibreGL();
+    SlintGLMapLibre();
+    ~SlintGLMapLibre();
 
     void initialize(int width, int height);
     void resize(int width, int height);
     void run_map_loop();
+    // Legacy path: render directly to an FBO in the current context.
     void render_to_fbo(uint32_t fbo, int width, int height);
+    // Isolated path: enqueue render into a shared texture using a dedicated GL
+    // context.
+    void render_to_texture(uint32_t texture, int width, int height);
 
     void setStyleUrl(const std::string& url);
     void handle_mouse_press(float x, float y);
@@ -187,14 +202,20 @@ public:
     void handle_wheel_zoom(float x, float y, float dy);
     void fly_to(const std::string& location);
 
-    // MapObserver (no-op for now)
+    // MapObserver (log basic lifecycle)
     void onWillStartLoadingMap() override {
+        std::cout << "[MapObserver] will start loading map" << std::endl;
     }
     void onDidFinishLoadingStyle() override {
+        std::cout << "[MapObserver] did finish loading style" << std::endl;
     }
     void onDidBecomeIdle() override {
+        std::cout << "[MapObserver] did become idle" << std::endl;
     }
-    void onDidFailLoadingMap(mbgl::MapLoadError, const std::string&) override {
+    void onDidFailLoadingMap(mbgl::MapLoadError err,
+                             const std::string& msg) override {
+        std::cout << "[MapObserver] did fail loading map: err=" << (int)err
+                  << " msg=" << msg << std::endl;
     }
 
 private:
@@ -210,6 +231,36 @@ private:
     double max_zoom = 22.0;
 
     bool first_render_ = true;
+
+#ifdef _WIN32
+    // Context isolation (Windows/WGL)
+    // -------------------------------------------------
+    bool isolate_ctx_ = false;  // MLNS_GL_ISOLATE_CONTEXT
+    void ensure_isolated_context_created();
+    void isolated_render_thread_main();
+    void request_isolated_render(uint32_t texture, int w, int h);
+
+    void* slint_hdc_ = nullptr;    // HDC (from wglGetCurrentDC)
+    void* slint_hglrc_ = nullptr;  // HGLRC (from wglGetCurrentContext)
+    void* map_hglrc_ = nullptr;    // isolated HGLRC
+    // isolated uses its own FBO to attach the shared texture
+    uint32_t iso_fbo_ = 0;
+    uint32_t iso_depth_rb_ = 0;
+    int iso_w_ = 0;
+    int iso_h_ = 0;
+
+    std::thread iso_thread_;
+    std::mutex iso_mu_;
+    std::condition_variable iso_cv_;
+    bool iso_stop_ = false;
+    struct IsoReq {
+        uint32_t tex = 0;
+        int w = 0;
+        int h = 0;
+        uint64_t seq = 0;
+    } iso_req_{};
+    uint64_t iso_done_seq_ = 0;
+#endif
 };
 
 }  // namespace mlns

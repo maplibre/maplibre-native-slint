@@ -32,3 +32,10 @@ vendor/
 *.log
 
 cache.sqlite
+cache.sqlite-journal
+
+# Additional ignores
+build-*/
+.DS_Store
+
+dumps/*

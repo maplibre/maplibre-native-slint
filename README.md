@@ -9,6 +9,7 @@ For detailed build instructions, see the platform-specific guides:
 - **Linux**: [Ubuntu 24.04 Build Guide](docs/build/Linux_Ubuntu_24.md)
 - **macOS**: [macOS Build Guide](docs/build/macOS_Apple_Silicon.md)
 - **Windows**: [Windows Build Guide](docs/build/Windows.md) _(coming soon)_
+  - For GL zero-copy (Slint Skia OpenGL) on Windows, see [Windows_GL.md](docs/build/Windows_GL.md)
 
 ## Screenshots
 

@@ -42,7 +42,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 
 # Run
-./maplibre-slint-example
+./build/maplibre-slint-example
 ```
 
 **Note**: Slint dependencies are now automatically resolved! CMake will download and build Slint if it's not found system-wide.

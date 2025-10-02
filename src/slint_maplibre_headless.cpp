@@ -121,8 +121,6 @@ void SlintMapLibre::onWillStartLoadingMap() {
 void SlintMapLibre::onDidFinishLoadingStyle() {
     std::cout << "[MapObserver] Did finish loading style" << std::endl;
     style_loaded = true;
-    request_repaint();
-    arm_forced_repaint_ms(200);
 }
 
 void SlintMapLibre::onDidBecomeIdle() {
@@ -151,6 +149,23 @@ void SlintMapLibre::onDidFailLoadingMap(mbgl::MapLoadError error,
                             "background-opacity": 1.0}}]
         })JSON";
         map->getStyle().loadJSON(fallback_json);
+    }
+}
+
+void SlintMapLibre::onCameraDidChange(CameraChangeMode) {
+    request_repaint();
+    arm_forced_repaint_ms(100);
+}
+
+void SlintMapLibre::onSourceChanged(mbgl::style::Source&) {
+    request_repaint();
+    arm_forced_repaint_ms(100);
+}
+
+void SlintMapLibre::onDidFinishRenderingFrame(const RenderFrameStatus& status) {
+    if (status.needsRepaint) {
+        request_repaint();
+        arm_forced_repaint_ms(100);
     }
 }
 

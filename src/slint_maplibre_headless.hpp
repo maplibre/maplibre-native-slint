@@ -87,6 +87,9 @@ public:
     void onDidBecomeIdle() override;
     void onDidFailLoadingMap(mbgl::MapLoadError error,
                              const std::string& what) override;
+    void onCameraDidChange(CameraChangeMode) override;
+    void onSourceChanged(mbgl::style::Source&) override;
+    void onDidFinishRenderingFrame(const RenderFrameStatus&) override;
 
 private:
     // Declaration order matters for destruction order (bottom-up).

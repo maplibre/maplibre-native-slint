@@ -1,4 +1,4 @@
-import { Button, VerticalBox, ComboBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, ComboBox, HorizontalBox, Slider } from "std-widgets.slint";
 
 // Define a struct to hold window size
 export struct Size {
@@ -16,6 +16,8 @@ export global MapAdapter {
     callback double_click_with_shift(float, float, bool);
     callback wheel_zoom(float, float, float);
     callback fly_to(string);
+    callback pitch_changed(int);
+    callback bearing_changed(float);
 }
 
 export component MapWindow inherits Window {
@@ -74,6 +76,30 @@ export component MapWindow inherits Window {
                 text: "Tokyo";
                 clicked => {
                     MapAdapter.fly_to("tokyo");
+                }
+            }
+            Text {
+                text: "Pitch:";
+                vertical-alignment: center;
+            }
+            Slider {
+                minimum: 0;
+                maximum: 100;
+                value: 0;
+                changed value => {
+                    MapAdapter.pitch_changed(self.value);
+                }
+            }
+            Text {
+                text: "Bearing:";
+                vertical-alignment: center;
+            }
+            Slider {
+                minimum: 0;
+                maximum: 100;
+                value: 0;
+                changed value => {
+                    MapAdapter.bearing_changed(self.value);
                 }
             }
         }

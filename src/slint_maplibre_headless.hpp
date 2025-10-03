@@ -68,6 +68,8 @@ public:
     void handle_mouse_move(float x, float y, bool pressed);
     void handle_double_click(float x, float y, bool shift);
     void handle_wheel_zoom(float x, float y, float dy);
+    void set_pitch(int pitch_value);
+    void set_bearing(float bearing_value);
     void setStyleUrl(const std::string& url);
     void fly_to(const std::string& location);
 

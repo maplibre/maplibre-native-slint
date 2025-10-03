@@ -286,8 +286,9 @@ void SlintMapLibre::handle_mouse_release(float x, float y) {
 void SlintMapLibre::handle_mouse_move(float x, float y, bool pressed) {
     if (pressed) {
         mbgl::Point<double> current_pos = {x, y};
+        mbgl::Point<double> delta = current_pos - last_pos;
         // Move the map along with the pointer movement (dragging behavior)
-        map->moveBy(current_pos - last_pos);
+        map->moveBy(delta);
         last_pos = current_pos;
         map->triggerRepaint();
     }

@@ -67,6 +67,15 @@ int main(int argc, char** argv) {
             slint_map_libre->handle_wheel_zoom(x, y, dy);
         });
 
+    // Pitch and bearing controls
+    main_window->global<MapAdapter>().on_pitch_changed(
+        [=](int pitch_value) { slint_map_libre->set_pitch(pitch_value); });
+
+    main_window->global<MapAdapter>().on_bearing_changed(
+        [=](float bearing_value) {
+            slint_map_libre->set_bearing(bearing_value);
+        });
+
     main_window->global<MapAdapter>().on_fly_to(
         [=](const slint::SharedString& location) {
             slint_map_libre->fly_to(

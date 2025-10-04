@@ -323,6 +323,42 @@ void SlintMapLibre::handle_wheel_zoom(float x, float y, float dy) {
     map->triggerRepaint();
 }
 
+void SlintMapLibre::set_pitch(int pitch_value) {
+    if (!map)
+        return;
+    // Convert slider value (0-100) to pitch in degrees (0-60)
+    double pitch = (pitch_value / 100.0) * 60.0;
+
+    // Get current camera state and update pitch
+    const auto cam = map->getCameraOptions();
+    mbgl::CameraOptions next;
+    next.withCenter(cam.center)
+        .withZoom(cam.zoom)
+        .withBearing(cam.bearing)
+        .withPitch(std::optional<double>(pitch));
+
+    map->jumpTo(next);
+    map->triggerRepaint();
+}
+
+void SlintMapLibre::set_bearing(float bearing_value) {
+    if (!map)
+        return;
+    // Convert slider value (0-100) to bearing in degrees (0-360)
+    double bearing = (bearing_value / 100.0) * 360.0;
+
+    // Get current camera state and update bearing
+    const auto cam = map->getCameraOptions();
+    mbgl::CameraOptions next;
+    next.withCenter(cam.center)
+        .withZoom(cam.zoom)
+        .withPitch(cam.pitch)
+        .withBearing(std::optional<double>(bearing));
+
+    map->jumpTo(next);
+    map->triggerRepaint();
+}
+
 void SlintMapLibre::run_map_loop() {
     if (run_loop) {
         run_loop->runOnce();

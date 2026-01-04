@@ -50,4 +50,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: maplibre-slint-example-windows
-        path: build-ninja/maplibre-slint-example.exe
+        path: build-ninja/*.exe

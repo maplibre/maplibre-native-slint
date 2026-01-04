@@ -28,6 +28,10 @@ This guide walks you through building the **MapLibre Native + Slint** integratio
 2. **CMake / Ninja / Git**
 
    - Install from official installers or your preferred package manager.
+   - **Important**: Enable long paths support in Git to handle deep directory structures in submodules:
+     ```powershell
+     git config --global core.longpaths true
+     ```
 
 3. **Rust (required by Slint)**
 

@@ -39,11 +39,19 @@ void SlintMapLibre::initialize(int w, int h) {
               << std::endl;
 
     // Initialize RunLoop similar to mbgl-render (one per thread)
+#if defined(__APPLE__)
+    // On macOS, winit manages the CFRunLoop. Creating a separate
+    // mbgl::util::RunLoop conflicts with it. We rely on the system loop here.
+    std::cout << "[SlintMapLibre] macOS detected: Skipping mbgl::util::RunLoop "
+                 "creation to avoid winit conflict"
+              << std::endl;
+#else
     if (!run_loop) {
         std::cout << "[SlintMapLibre] Creating mbgl::util::RunLoop"
                   << std::endl;
         run_loop = std::make_unique<mbgl::util::RunLoop>();
     }
+#endif
 
     // Create HeadlessFrontend with the exact same parameters as mbgl-render
     frontend = std::make_unique<mbgl::HeadlessFrontend>(

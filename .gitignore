@@ -3,6 +3,7 @@
 build/
 build-*/
 build-ninja/
+dumps/
 
 .cache
 CMakeCache.txt

@@ -42,8 +42,7 @@ void SlintMapLibre::initialize(int w, int h) {
 #if defined(__APPLE__)
     // On macOS, winit manages the CFRunLoop. Creating a separate
     // mbgl::util::RunLoop conflicts with it. We rely on the system loop here.
-    std::cout << "[SlintMapLibre] macOS detected: Skipping mbgl::util::RunLoop "
-                 "creation to avoid winit conflict"
+    std::cout << "[SlintMapLibre] macOS detected: Skipping mbgl::util::RunLoop creation to avoid winit conflict"
               << std::endl;
 #else
     if (!run_loop) {

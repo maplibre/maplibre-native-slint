@@ -144,7 +144,7 @@ TEST_F(IntegrationTest, FileSourceResourceOptions) {
     options.withCachePath("/tmp/integration-test-cache");
     options.withAssetPath("./assets");
 
-    EXPECT_NO_THROW(file_source->setResourceOptions(options));
+    file_source->setResourceOptions(std::move(options));
 
     // Map operations should still work
     slint_map->set_pitch(45);

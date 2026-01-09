@@ -260,7 +260,7 @@ TEST_F(CustomFileSourceTest, SetAndGetResourceOptions) {
     options.withCachePath("/tmp/test-cache");
     options.withAssetPath("/tmp/test-assets");
 
-    EXPECT_NO_THROW(file_source->setResourceOptions(options));
+    file_source->setResourceOptions(std::move(options));
 
     // Getting options after setting
     auto retrieved_options = file_source->getResourceOptions();
@@ -271,7 +271,7 @@ TEST_F(CustomFileSourceTest, SetAndGetResourceOptions) {
 TEST_F(CustomFileSourceTest, SetAndGetClientOptions) {
     // Test setting client options
     mbgl::ClientOptions options;
-    EXPECT_NO_THROW(file_source->setClientOptions(options));
+    file_source->setClientOptions(std::move(options));
 
     // Getting options after setting
     auto retrieved_options = file_source->getClientOptions();

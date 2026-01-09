@@ -158,27 +158,27 @@ TEST_F(CustomFileSourceTest, MultipleSimultaneousRequests) {
 TEST_F(CustomFileSourceTest, CanRequestDifferentResourceTypes) {
     // Test different resource types
     mbgl::Resource style_resource(mbgl::Resource::Kind::Style,
-                                   "https://example.com/style.json");
+                                  "https://example.com/style.json");
     EXPECT_TRUE(file_source->canRequest(style_resource));
 
     mbgl::Resource source_resource(mbgl::Resource::Kind::Source,
-                                    "https://example.com/source.json");
+                                   "https://example.com/source.json");
     EXPECT_TRUE(file_source->canRequest(source_resource));
 
     mbgl::Resource tile_resource(mbgl::Resource::Kind::Tile,
-                                  "https://example.com/tiles/1/2/3.mvt");
+                                 "https://example.com/tiles/1/2/3.mvt");
     EXPECT_TRUE(file_source->canRequest(tile_resource));
 
     mbgl::Resource glyphs_resource(mbgl::Resource::Kind::Glyphs,
-                                    "https://example.com/fonts/Arial.pbf");
+                                   "https://example.com/fonts/Arial.pbf");
     EXPECT_TRUE(file_source->canRequest(glyphs_resource));
 
-    mbgl::Resource sprite_image_resource(
-        mbgl::Resource::Kind::SpriteImage, "https://example.com/sprite.png");
+    mbgl::Resource sprite_image_resource(mbgl::Resource::Kind::SpriteImage,
+                                         "https://example.com/sprite.png");
     EXPECT_TRUE(file_source->canRequest(sprite_image_resource));
 
-    mbgl::Resource sprite_json_resource(
-        mbgl::Resource::Kind::SpriteJSON, "https://example.com/sprite.json");
+    mbgl::Resource sprite_json_resource(mbgl::Resource::Kind::SpriteJSON,
+                                        "https://example.com/sprite.json");
     EXPECT_TRUE(file_source->canRequest(sprite_json_resource));
 }
 
@@ -219,10 +219,9 @@ TEST_F(CustomFileSourceTest, RequestCancellationMultiple) {
             "https://demotiles.maplibre.org/style.json?cancel=" +
                 std::to_string(i));
 
-        auto request = file_source->request(
-            resource, [](mbgl::Response) {
-                FAIL() << "Callback should not be called after cancellation";
-            });
+        auto request = file_source->request(resource, [](mbgl::Response) {
+            FAIL() << "Callback should not be called after cancellation";
+        });
 
         EXPECT_NE(request, nullptr);
         requests.push_back(std::move(request));
@@ -322,9 +321,9 @@ TEST_F(CustomFileSourceTest, UrlWithInternationalCharacters) {
 TEST_F(CustomFileSourceTest, HttpAndHttpsComparison) {
     // Test both HTTP and HTTPS are accepted
     mbgl::Resource http_resource(mbgl::Resource::Kind::Source,
-                                  "http://example.com/style.json");
+                                 "http://example.com/style.json");
     mbgl::Resource https_resource(mbgl::Resource::Kind::Source,
-                                   "https://example.com/style.json");
+                                  "https://example.com/style.json");
 
     EXPECT_TRUE(file_source->canRequest(http_resource));
     EXPECT_TRUE(file_source->canRequest(https_resource));

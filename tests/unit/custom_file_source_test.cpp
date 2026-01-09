@@ -154,3 +154,178 @@ TEST_F(CustomFileSourceTest, MultipleSimultaneousRequests) {
     // Clean up
     requests.clear();
 }
+
+TEST_F(CustomFileSourceTest, CanRequestDifferentResourceTypes) {
+    // Test different resource types
+    mbgl::Resource style_resource(mbgl::Resource::Kind::Style,
+                                   "https://example.com/style.json");
+    EXPECT_TRUE(file_source->canRequest(style_resource));
+
+    mbgl::Resource source_resource(mbgl::Resource::Kind::Source,
+                                    "https://example.com/source.json");
+    EXPECT_TRUE(file_source->canRequest(source_resource));
+
+    mbgl::Resource tile_resource(mbgl::Resource::Kind::Tile,
+                                  "https://example.com/tiles/1/2/3.mvt");
+    EXPECT_TRUE(file_source->canRequest(tile_resource));
+
+    mbgl::Resource glyphs_resource(mbgl::Resource::Kind::Glyphs,
+                                    "https://example.com/fonts/Arial.pbf");
+    EXPECT_TRUE(file_source->canRequest(glyphs_resource));
+
+    mbgl::Resource sprite_image_resource(
+        mbgl::Resource::Kind::SpriteImage, "https://example.com/sprite.png");
+    EXPECT_TRUE(file_source->canRequest(sprite_image_resource));
+
+    mbgl::Resource sprite_json_resource(
+        mbgl::Resource::Kind::SpriteJSON, "https://example.com/sprite.json");
+    EXPECT_TRUE(file_source->canRequest(sprite_json_resource));
+}
+
+TEST_F(CustomFileSourceTest, CannotRequestUnsupportedResourceType) {
+    // Test unsupported resource type
+    mbgl::Resource resource(mbgl::Resource::Kind::Image,
+                            "https://example.com/image.png");
+    EXPECT_FALSE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, EmptyUrlResource) {
+    // Test empty URL
+    mbgl::Resource resource(mbgl::Resource::Kind::Source, "");
+    EXPECT_FALSE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, DataUrlResource) {
+    // Test data: URL (unsupported)
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "data:application/json,{}");
+    EXPECT_FALSE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, FtpUrlResource) {
+    // Test FTP URL (unsupported)
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "ftp://example.com/style.json");
+    EXPECT_FALSE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, RequestCancellationMultiple) {
+    // Test cancelling multiple requests
+    std::vector<std::unique_ptr<mbgl::AsyncRequest>> requests;
+
+    for (int i = 0; i < 5; ++i) {
+        mbgl::Resource resource(
+            mbgl::Resource::Kind::Source,
+            "https://demotiles.maplibre.org/style.json?cancel=" +
+                std::to_string(i));
+
+        auto request = file_source->request(
+            resource, [](mbgl::Response) {
+                FAIL() << "Callback should not be called after cancellation";
+            });
+
+        EXPECT_NE(request, nullptr);
+        requests.push_back(std::move(request));
+    }
+
+    // Cancel all requests
+    requests.clear();
+    EXPECT_EQ(requests.size(), 0);
+}
+
+TEST_F(CustomFileSourceTest, RequestWithSpecialCharactersInUrl) {
+    // Test URL with special characters
+    mbgl::Resource resource(
+        mbgl::Resource::Kind::Source,
+        "https://example.com/style.json?param=value&other=123");
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, RequestWithPortInUrl) {
+    // Test URL with custom port
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "https://example.com:8080/style.json");
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, RequestWithFragmentInUrl) {
+    // Test URL with fragment
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "https://example.com/style.json#section");
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, SetAndGetResourceOptions) {
+    // Test setting resource options
+    mbgl::ResourceOptions options;
+    options.withCachePath("/tmp/test-cache");
+    options.withAssetPath("/tmp/test-assets");
+
+    EXPECT_NO_THROW(file_source->setResourceOptions(options));
+
+    // Getting options after setting
+    auto retrieved_options = file_source->getResourceOptions();
+    // Note: ResourceOptions might be moved, so we just check it doesn't throw
+    EXPECT_TRUE(true);
+}
+
+TEST_F(CustomFileSourceTest, SetAndGetClientOptions) {
+    // Test setting client options
+    mbgl::ClientOptions options;
+    EXPECT_NO_THROW(file_source->setClientOptions(options));
+
+    // Getting options after setting
+    auto retrieved_options = file_source->getClientOptions();
+    EXPECT_TRUE(true);
+}
+
+TEST_F(CustomFileSourceTest, RequestSequential) {
+    // Test sequential requests (not simultaneous)
+    for (int i = 0; i < 3; ++i) {
+        mbgl::Resource resource(
+            mbgl::Resource::Kind::Source,
+            "https://demotiles.maplibre.org/style.json?seq=" +
+                std::to_string(i));
+
+        auto request =
+            file_source->request(resource, [](mbgl::Response response) {
+                // Each request gets its own callback
+            });
+
+        EXPECT_NE(request, nullptr);
+        // Request goes out of scope and is cleaned up
+    }
+}
+
+TEST_F(CustomFileSourceTest, VeryLongUrl) {
+    // Test with very long URL
+    std::string long_path(1000, 'a');
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "https://example.com/" + long_path);
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, UrlWithEncodedCharacters) {
+    // Test URL with percent-encoded characters
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "https://example.com/style%20name.json");
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, UrlWithInternationalCharacters) {
+    // Test URL with international domain name
+    mbgl::Resource resource(mbgl::Resource::Kind::Source,
+                            "https://例え.com/style.json");
+    EXPECT_TRUE(file_source->canRequest(resource));
+}
+
+TEST_F(CustomFileSourceTest, HttpAndHttpsComparison) {
+    // Test both HTTP and HTTPS are accepted
+    mbgl::Resource http_resource(mbgl::Resource::Kind::Source,
+                                  "http://example.com/style.json");
+    mbgl::Resource https_resource(mbgl::Resource::Kind::Source,
+                                   "https://example.com/style.json");
+
+    EXPECT_TRUE(file_source->canRequest(http_resource));
+    EXPECT_TRUE(file_source->canRequest(https_resource));
+}

@@ -35,6 +35,8 @@ set(MAPLIBRE_SLINT_TEST_LIBRARIES
 # Unit tests (require OpenGL for some parts)
 add_executable(unit-tests
     unit/custom_file_source_test.cpp
+    unit/slint_maplibre_headless_test.cpp
+    unit/integration_test.cpp
     unit/test_main.cpp
     ${MAPLIBRE_SLINT_SOURCES}
 )

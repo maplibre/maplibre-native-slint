@@ -147,8 +147,8 @@ TEST_F(SlintMapLibreTest, SetBearingNegative) {
 TEST_F(SlintMapLibreTest, SetStyleUrl) {
     // Test setting style URL
     slint_map->initialize(800, 600);
-    EXPECT_NO_THROW(slint_map->setStyleUrl(
-        "https://demotiles.maplibre.org/style.json"));
+    EXPECT_NO_THROW(
+        slint_map->setStyleUrl("https://demotiles.maplibre.org/style.json"));
 }
 
 TEST_F(SlintMapLibreTest, FlyToLocation) {
@@ -220,9 +220,8 @@ TEST_F(SlintMapLibreTest, SetRenderCallback) {
     // Test setting a render callback
     slint_map->initialize(800, 600);
     bool callback_called = false;
-    slint_map->setRenderCallback([&callback_called]() {
-        callback_called = true;
-    });
+    slint_map->setRenderCallback(
+        [&callback_called]() { callback_called = true; });
 
     // Trigger a repaint to invoke the callback
     slint_map->request_repaint();

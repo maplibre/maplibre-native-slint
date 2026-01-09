@@ -1,9 +1,9 @@
-#include "custom_file_source.hpp"
-#include "slint_maplibre_headless.hpp"
-
 #include <gtest/gtest.h>
 #include <mbgl/storage/resource.hpp>
 #include <memory>
+
+#include "custom_file_source.hpp"
+#include "slint_maplibre_headless.hpp"
 
 class IntegrationTest : public ::testing::Test {
 protected:
@@ -34,9 +34,8 @@ TEST_F(IntegrationTest, FileSourceCanHandleMapResources) {
     slint_map->initialize(800, 600);
 
     // Test various resources that a map would request
-    mbgl::Resource style_resource(
-        mbgl::Resource::Kind::Style,
-        "https://demotiles.maplibre.org/style.json");
+    mbgl::Resource style_resource(mbgl::Resource::Kind::Style,
+                                  "https://demotiles.maplibre.org/style.json");
     EXPECT_TRUE(file_source->canRequest(style_resource));
 
     mbgl::Resource tile_resource(
@@ -48,8 +47,8 @@ TEST_F(IntegrationTest, FileSourceCanHandleMapResources) {
 TEST_F(IntegrationTest, MapWithStyleAndFileSource) {
     // Test map initialization with style URL
     slint_map->initialize(800, 600);
-    EXPECT_NO_THROW(slint_map->setStyleUrl(
-        "https://demotiles.maplibre.org/style.json"));
+    EXPECT_NO_THROW(
+        slint_map->setStyleUrl("https://demotiles.maplibre.org/style.json"));
 
     // Verify file source can handle the style URL
     mbgl::Resource resource(mbgl::Resource::Kind::Style,
@@ -212,10 +211,8 @@ TEST_F(IntegrationTest, FileSourceAndMapWithDifferentResourceTypes) {
         {mbgl::Resource::Kind::Source, "https://example.com/source.json"},
         {mbgl::Resource::Kind::Tile, "https://example.com/tiles/1/2/3.mvt"},
         {mbgl::Resource::Kind::Glyphs, "https://example.com/fonts/font.pbf"},
-        {mbgl::Resource::Kind::SpriteImage,
-         "https://example.com/sprite.png"},
-        {mbgl::Resource::Kind::SpriteJSON,
-         "https://example.com/sprite.json"}};
+        {mbgl::Resource::Kind::SpriteImage, "https://example.com/sprite.png"},
+        {mbgl::Resource::Kind::SpriteJSON, "https://example.com/sprite.json"}};
 
     for (const auto& test : resource_tests) {
         mbgl::Resource resource(test.kind, test.url);

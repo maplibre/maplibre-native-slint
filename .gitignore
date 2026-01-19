@@ -40,3 +40,4 @@ vendor/
 
 cache.sqlite
 cache.sqlite-journal
+test_cache.sqlite

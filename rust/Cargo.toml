@@ -1,0 +1,11 @@
+[package]
+name = "maplibre_native_slint"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+slint = "1.14.1"
+maplibre_native = "0.4.1"
+
+[build-dependencies]
+slint-build = "1.14.1"

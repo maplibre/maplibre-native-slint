@@ -3,7 +3,11 @@
 build/
 build-*/
 build-ninja/
+target/
+
 dumps/
+logs/
+tmp/
 
 .cache
 CMakeCache.txt
@@ -36,3 +40,4 @@ vendor/
 
 cache.sqlite
 cache.sqlite-journal
+test_cache.sqlite

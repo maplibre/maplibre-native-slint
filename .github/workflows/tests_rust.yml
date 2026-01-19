@@ -68,5 +68,5 @@ jobs:
         working-directory: ./rust
       
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --test maplibre_tests
         working-directory: ./rust

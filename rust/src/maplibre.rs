@@ -1,95 +1,30 @@
 use std::cell::RefCell;
-use std::num::NonZeroU32;
 use std::sync::Arc;
 
-use maplibre_native::{Image, ImageRenderer, ImageRendererBuilder, Static};
 use slint::ComponentHandle;
 
-use crate::MainWindow;
+use crate::MapWindow;
 use crate::MapAdapter;
-use crate::Size;
 
-/// Wrapper around a static image renderer for headless map rendering
-pub struct MapLibre {
-    renderer: ImageRenderer<Static>,
-    last_image: Option<Image>,
-}
-
-impl MapLibre {
-    /// Create a new MapLibre instance with the given size
-    pub fn new(width: u32, height: u32) -> Self {
-        let mut renderer = ImageRendererBuilder::new()
-            .with_size(
-                NonZeroU32::new(width.max(1)).unwrap(),
-                NonZeroU32::new(height.max(1)).unwrap(),
-            )
-            .build_static_renderer();
-
-        // Load a default map style
-        if let Ok(url) = "https://demotiles.maplibre.org/style.json".parse() {
-            renderer.load_style_from_url(&url);
-        }
-
-        Self {
-            renderer,
-            last_image: None,
-        }
-    }
-
-    /// Get a mutable reference to the renderer
-    #[allow(dead_code)]
-    pub fn renderer(&mut self) -> &mut ImageRenderer<Static> {
-        &mut self.renderer
-    }
-
-    /// Get the last rendered image
-    pub fn image(&self) -> Option<&Image> {
-        self.last_image.as_ref()
-    }
-
-    /// Render a frame and store the result
-    pub fn render(&mut self) -> Result<(), String> {
-        // Render a static image at the default position
-        // (0.0, 0.0) = center, 0.0 = zoom level, bearing and pitch are 0.0
-        let image = self
-            .renderer
-            .render_static(0.0, 0.0, 0.0, 0.0, 0.0)
-            .map_err(|e| format!("Render error: {:?}", e))?;
-
-        self.last_image = Some(image);
-        Ok(())
-    }
-}
-
-/// Create a new MapLibre instance
-pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
-    let width = (size.width as u32).max(1);
-    let height = (size.height as u32).max(1);
-    Arc::new(RefCell::new(MapLibre::new(width, height)))
-}
+mod headless;
+pub use headless::create_map;
+use headless::MapLibre;
 
 /// Initialize UI callbacks and map interactions
-pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
-    // Set initial map size callback
-    ui.on_get_map_size({
+pub fn init(ui: &MapWindow, map: &Arc<RefCell<MapLibre>>) {
+    ui.on_window_size_changed({
+        let map = Arc::downgrade(map);
         move || {
-            Size {
-                width: 800.0,
-                height: 600.0,
+            if let Some(map) = map.upgrade() {
+                // Window size changed - could be used for responsive layout
             }
         }
     });
 
     ui.on_map_size_changed({
         let map = Arc::downgrade(map);
-        move |size| {
-            if let Some(map) = map.upgrade() {
-                let width = (size.width as u32).max(1);
-                let height = (size.height as u32).max(1);
-                // Recreate the renderer with the new size
-                let mut map = map.borrow_mut();
-                *map = MapLibre::new(width, height);
-            }
+        move || {
+            // Map size changed - renderer is already resized by the UI
         }
     });
 
@@ -99,18 +34,18 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
         move || {
             if let Some(map_arc) = map.upgrade() {
                 let mut map = map_arc.borrow_mut();
-                if let Ok(_) = map.render() {
-                    if let Some(image) = map.image() {
-                        let img_buffer = image.as_image();
-                        let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-                            img_buffer.as_raw(),
-                            img_buffer.width(),
-                            img_buffer.height(),
-                        );
-                        if let Some(ui) = ui_handle.upgrade() {
-                            ui.global::<MapAdapter>()
-                                .set_map_texture(slint::Image::from_rgba8(img));
-                        }
+                map.render_once();
+                if map.updated() {
+                    let image = map.read_still_image();
+                    let img_buffer = image.as_image();
+                    let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
+                        img_buffer.as_raw(),
+                        img_buffer.width(),
+                        img_buffer.height(),
+                    );
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.global::<MapAdapter>()
+                            .set_map_texture(slint::Image::from_rgba8(img));
                     }
                 }
             }
@@ -119,8 +54,8 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
 
     ui.global::<MapAdapter>().on_mouse_press({
         let map = Arc::downgrade(map);
-        move |_x: f32, _y: f32| {
-            if let Some(_map_arc) = map.upgrade() {
+        move |x: f32, y: f32| {
+            if let Some(map_arc) = map.upgrade() {
                 // TODO: Handle mouse press on map
             }
         }
@@ -128,8 +63,8 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
 
     ui.global::<MapAdapter>().on_mouse_release({
         let map = Arc::downgrade(map);
-        move |_x: f32, _y: f32| {
-            if let Some(_map_arc) = map.upgrade() {
+        move |x: f32, y: f32| {
+            if let Some(map_arc) = map.upgrade() {
                 // TODO: Handle mouse release on map
             }
         }
@@ -137,9 +72,18 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
 
     ui.global::<MapAdapter>().on_mouse_move({
         let map = Arc::downgrade(map);
-        move |_x: f32, _y: f32, _shift: bool| {
-            if let Some(_map_arc) = map.upgrade() {
+        move |x: f32, y: f32, _shift: bool| {
+            if let Some(map_arc) = map.upgrade() {
                 // TODO: Handle mouse move on map
+            }
+        }
+    });
+
+    ui.global::<MapAdapter>().on_double_click_with_shift({
+        let map = Arc::downgrade(map);
+        move |_x: f32, _y: f32, _shift: bool| {
+            if let Some(map_arc) = map.upgrade() {
+                // TODO: Handle double click with shift on map
             }
         }
     });
@@ -147,8 +91,48 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
     ui.global::<MapAdapter>().on_wheel_zoom({
         let map = Arc::downgrade(map);
         move |_x: f32, _y: f32, _delta: f32| {
-            if let Some(_map_arc) = map.upgrade() {
+            if let Some(map_arc) = map.upgrade() {
                 // TODO: Handle wheel zoom on map
+            }
+        }
+    });
+
+    ui.global::<MapAdapter>().on_style_changed({
+        let map = Arc::downgrade(map);
+        move |style_url: slint::SharedString| {
+            if let Some(map_arc) = map.upgrade() {
+                let mut map = map_arc.borrow_mut();
+                map.load_style(&style_url);
+            }
+        }
+    });
+
+    ui.global::<MapAdapter>().on_fly_to({
+        let map = Arc::downgrade(map);
+        move |_location: slint::SharedString| {
+            if let Some(map_arc) = map.upgrade() {
+                // TODO: Implement fly_to for different locations
+                // - "paris" -> lat: 48.8566, lon: 2.3522
+                // - "new_york" -> lat: 40.7128, lon: -74.0060
+                // - "tokyo" -> lat: 35.6762, lon: 139.6503
+            }
+        }
+    });
+
+    ui.global::<MapAdapter>().on_pitch_changed({
+        let map = Arc::downgrade(map);
+        move |_pitch: i32| {
+            if let Some(map_arc) = map.upgrade() {
+                // TODO: Handle pitch change
+            }
+        }
+    });
+
+    ui.global::<MapAdapter>().on_bearing_changed({
+        let map = Arc::downgrade(map);
+        move |_bearing: f32| {
+            if let Some(map_arc) = map.upgrade() {
+                // TODO: Handle bearing change
             }
         }
     });

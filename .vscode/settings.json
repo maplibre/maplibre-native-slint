@@ -40,6 +40,7 @@
     "ldconfig",
     "libbrotli",
     "libegl",
+    "libfontconfig",
     "libgl",
     "libgles",
     "libglfw",
@@ -53,10 +54,12 @@
     "libuv",
     "libwebp",
     "libx",
+    "libxcb",
     "libxcursor",
     "libxext",
     "libxi",
     "libxinerama",
+    "libxkbcommon",
     "libxrandr",
     "libzstd",
     "maplibre",
@@ -78,7 +81,8 @@
     "UBSAN",
     "unittests",
     "unpremult",
-    "vcpkg"
+    "vcpkg",
+    "xfixes"
   ],
   "files.associations": {
     "__tree": "cpp",

@@ -163,7 +163,7 @@ Check firewall settings and network connectivity.
 After successful build:
 1. Run the example application in a graphical environment
 2. Explore the source code in `src/` and `examples/`
-3. Modify the Slint UI in `examples/map_window.slint`
+3. Modify the Slint UI in `cpp/map_window.slint`
 4. Check the integration code in `src/slint_maplibre.cpp`
 
 ## Ubuntu Version Notes

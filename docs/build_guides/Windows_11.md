@@ -159,7 +159,7 @@ maplibre-slint-example.exe
 ## Next steps
 
 1. Start the sample: `maplibre-slint-example.exe`
-2. Tweak the UI in `examples/map_window.slint`
+2. Tweak the UI in `cpp/map_window.slint`
 3. Explore integration code in `src/slint_maplibre.cpp`
 4. Adjust dependencies in `vcpkg.json` if you add features
 ````

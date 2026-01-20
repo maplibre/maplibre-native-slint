@@ -118,101 +118,40 @@ if (NOT TARGET cpr::cpr)
   endif()
 endif()
 
-# --- executable ---
-add_executable(maplibre-slint-example
-    examples/main.cpp
-    src/slint_maplibre_headless.cpp
-    platform/custom_file_source.cpp
-)
-
-if (WIN32)
-  target_compile_definitions(maplibre-slint-example
-    PRIVATE NOMINMAX _USE_MATH_DEFINES WIN32_LEAN_AND_MEAN)
-
-  if (MSVC)
-    target_compile_options(maplibre-slint-example PRIVATE /utf-8 /MP)
-  endif()
-
-  find_package(libuv CONFIG REQUIRED)
-
-  if (TARGET libuv::uv_a)
-    set(ML_UV_TARGET libuv::uv_a)
-  else()
-    set(ML_UV_TARGET libuv::uv)
-  endif()
-
-  target_link_libraries(maplibre-slint-example PRIVATE ${ML_UV_TARGET})
-endif()
-
-# Associate .slint files with the target (only if the helper is available)
-if (COMMAND slint_target_sources)
-    slint_target_sources(maplibre-slint-example
-        examples/map_window.slint
-    )
-else()
-    message(FATAL_ERROR "slint_target_sources command is not available. Ensure Slint's CMake integration is present.")
-endif()
-
 # Find system deps
 find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 # Check if we're on macOS and handle OpenGL ES differently
 if(APPLE)
-    # macOS specific settings
-    set(CMAKE_OSX_ARCHITECTURES "arm64")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
+  # macOS specific settings
+  set(CMAKE_OSX_ARCHITECTURES "arm64")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "14.3")
 
-    # Find Metal framework for MapLibre
-    find_library(METAL_FRAMEWORK Metal)
+  # Find Metal framework for MapLibre
+  find_library(METAL_FRAMEWORK Metal)
 
-    # On macOS, use OpenGL instead of GLES
+  # On macOS, use OpenGL instead of GLES
+  set(GLES3_FOUND TRUE)
+  set(GLES3_INCLUDE_DIRS "")
+  set(GLES3_LIBRARIES "")
+else()
+  # On other platforms, try to find GLES
+  pkg_check_modules(GLES3 glesv2)
+  if(NOT GLES3_FOUND)
+    message(WARNING "GLES2 not found, falling back to OpenGL")
     set(GLES3_FOUND TRUE)
     set(GLES3_INCLUDE_DIRS "")
     set(GLES3_LIBRARIES "")
-else()
-    # On other platforms, try to find GLES
-    pkg_check_modules(GLES3 glesv2)
-    if(NOT GLES3_FOUND)
-        message(WARNING "GLES2 not found, falling back to OpenGL")
-        set(GLES3_FOUND TRUE)
-        set(GLES3_INCLUDE_DIRS "")
-        set(GLES3_LIBRARIES "")
-    endif()
+  endif()
 endif()
 
-# Include dirs for this project (Slint::Slint will propagate its own include dirs)
-target_include_directories(maplibre-slint-example
-    PRIVATE
-        src
-        platform
-        ${CMAKE_SOURCE_DIR}/vendor/maplibre-native/include
-        ${CMAKE_BINARY_DIR}/vendor/maplibre-native/include
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${GLES3_INCLUDE_DIRS}
-)
-
-# Link libraries. Linking Slint::Slint will also propagate include dirs and other usage requirements.
-target_link_libraries(maplibre-slint-example
-    PRIVATE
-        Slint::Slint
-        mbgl-core
-        cpr::cpr
-        ${GLES3_LIBRARIES}
-        ${OPENGL_LIBRARIES}
-        $<$<PLATFORM_ID:Darwin>:${METAL_FRAMEWORK}>
-)
-
-# On Windows, copy the Slint DLL next to the application binary so that it's found
-if (WIN32)
-    add_custom_command(TARGET maplibre-slint-example POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:maplibre-slint-example> $<TARGET_FILE_DIR:maplibre-slint-example>
-        COMMAND_EXPAND_LISTS)
-endif()
+# --- C++ example (lives in cpp/) ---
+add_subdirectory(cpp)
 
 # Add testing support
 enable_testing()
 
 if(BUILD_TESTS)
-    add_subdirectory(tests)
+  add_subdirectory(cpp/tests)
 endif()

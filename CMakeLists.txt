@@ -8,6 +8,46 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# --- Platform-specific compiler warnings handling ---
+# On Linux with modern GCC (13+), Boost Geometry triggers variable shadowing warnings.
+# These warnings don't affect functionality but can break builds with -Werror.
+# We suppress them here as a sensible default, but users can override if needed.
+if(NOT APPLE AND NOT MSVC)
+  # Check if the compiler supports -Wno-error=shadow
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(-Wno-error=shadow COMPILER_SUPPORTS_NO_ERROR_SHADOW)
+  if(COMPILER_SUPPORTS_NO_ERROR_SHADOW)
+    # Add the flag only if not already set by the user
+    if(NOT CMAKE_CXX_FLAGS MATCHES ".*Wno-error=shadow.*")
+      string(APPEND CMAKE_CXX_FLAGS " -Wno-error=shadow")
+    endif()
+  endif()
+endif()
+
+# --- Linux-specific pkg-config path setup ---
+# On Linux, ensure pkg-config can find system libraries like libuv and glfw3.
+# This is especially important on Ubuntu 24.04 where these packages are installed
+# in standard system directories but may not be in the default pkg-config path.
+if(UNIX AND NOT APPLE)
+  set(LINUX_PKGCONFIG_PATHS
+    "/usr/lib/x86_64-linux-gnu/pkgconfig"
+    "/usr/lib/pkgconfig"
+    "/usr/share/pkgconfig"
+  )
+  foreach(PATH ${LINUX_PKGCONFIG_PATHS})
+    if(EXISTS "${PATH}")
+      list(APPEND CMAKE_PREFIX_PATH "${PATH}")
+      # Also set environment variable for external tools
+      # Handle case where PKG_CONFIG_PATH might be empty
+      if(DEFINED ENV{PKG_CONFIG_PATH} AND NOT "$ENV{PKG_CONFIG_PATH}" STREQUAL "")
+        set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${PATH}")
+      else()
+        set(ENV{PKG_CONFIG_PATH} "${PATH}")
+      endif()
+    endif()
+  endforeach()
+endif()
+
 # Add testing support (default OFF)
 option(BUILD_TESTS "Build tests" OFF)
 
@@ -121,6 +161,31 @@ endif()
 # Find system deps
 find_package(OpenGL REQUIRED)
 find_package(PkgConfig REQUIRED)
+
+# --- Linux: Handle pkg-config search for dependencies ---
+# On Linux, explicitly search for critical dependencies to provide better error messages
+# if they are not found. This helps users understand what needs to be installed.
+if(UNIX AND NOT APPLE)
+  pkg_check_modules(LIBUV libuv QUIET)
+  if(NOT LIBUV_FOUND)
+    message(WARNING 
+      "libuv not found via pkg-config.\n"
+      "This may indicate the libuv development package is not installed.\n"
+      "On Ubuntu 24.04, install it with: sudo apt install -y libuv1-dev\n"
+      "Ensure PKG_CONFIG_PATH includes /usr/lib/x86_64-linux-gnu/pkgconfig\n"
+    )
+  endif()
+  
+  pkg_check_modules(GLFW glfw3 QUIET)
+  if(NOT GLFW_FOUND)
+    message(WARNING 
+      "glfw3 not found via pkg-config.\n"
+      "This may indicate the GLFW development package is not installed.\n"
+      "On Ubuntu 24.04, install it with: sudo apt install -y libglfw3-dev\n"
+      "Ensure PKG_CONFIG_PATH includes /usr/lib/x86_64-linux-gnu/pkgconfig\n"
+    )
+  endif()
+endif()
 
 # Check if we're on macOS and handle OpenGL ES differently
 if(APPLE)

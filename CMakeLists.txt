@@ -153,5 +153,5 @@ add_subdirectory(cpp)
 enable_testing()
 
 if(BUILD_TESTS)
-    add_subdirectory(tests)
+  add_subdirectory(cpp/tests)
 endif()

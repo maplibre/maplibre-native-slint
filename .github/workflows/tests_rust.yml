@@ -35,15 +35,28 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            ccache \
+            cmake \
+            g++ \
+            git \
+            glslang-dev \
+            glslang-tools \
             libcurl4-openssl-dev \
-            libssl-dev \
-            pkg-config \
             libfontconfig1-dev \
+            libglfw3-dev \
+            libgtk-3-dev \
+            libicu-dev \
+            libjpeg-turbo8-dev \
+            libpng-dev \
+            pkg-config \
+            libssl-dev \
+            libuv1-dev \
+            libwebp-dev \
             libxcb-render0-dev \
             libxcb-shape0-dev \
             libxcb-xfixes0-dev \
             libxkbcommon-dev \
-            libgtk-3-dev
+            spirv-tools
       
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -64,9 +77,13 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('rust/**/Cargo.lock') }}
       
       - name: Build
+        env:
+          MLN_CMAKE_CXX_LAUNCHER: ccache
         run: cargo build --verbose
         working-directory: ./rust
       
       - name: Run tests
-        run: cargo test --verbose --test maplibre_tests
+        env:
+          MLN_CMAKE_CXX_LAUNCHER: ccache
+        run: cargo test --verbose
         working-directory: ./rust

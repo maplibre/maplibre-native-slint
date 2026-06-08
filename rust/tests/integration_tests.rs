@@ -2,11 +2,49 @@
 // These tests verify the integration between components
 
 use std::num::NonZeroU32;
+use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+
+use maplibre_native::tile_server_options::TileServerOptions;
+use maplibre_native::{CameraUpdate, LatLng, ResourceOptions};
 
 fn renderer_test_lock() -> &'static Mutex<()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
+}
+
+fn renderer_tests_enabled() -> bool {
+    std::env::var_os("MAPLIBRE_NATIVE_SLINT_RUN_RENDERER_TESTS").as_deref() == Some("1".as_ref())
+}
+
+fn display_configured() -> bool {
+    std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
+fn skip_without_display() -> bool {
+    if !renderer_tests_enabled() {
+        eprintln!("skipping renderer integration test: opt-in env not set");
+        true
+    } else if (cfg!(target_os = "linux") || cfg!(target_os = "freebsd")) && !display_configured() {
+        eprintln!("skipping renderer integration test: no display configured");
+        true
+    } else {
+        false
+    }
+}
+
+fn resource_options_with_cache(path: PathBuf) -> ResourceOptions {
+    ResourceOptions::default()
+        .with_tile_server_options(&TileServerOptions::default())
+        .with_cache_path(path)
+}
+
+fn test_camera() -> CameraUpdate {
+    CameraUpdate::new()
+        .center(LatLng { lat: 0.0, lng: 0.0 })
+        .zoom(0.0)
+        .bearing(0.0)
+        .pitch(0.0)
 }
 
 #[test]
@@ -28,6 +66,9 @@ fn test_image_renderer_builder_creation() {
 
 #[test]
 fn test_static_renderer_creation() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -47,6 +88,9 @@ fn test_static_renderer_creation() {
 
 #[test]
 fn test_style_url_loading() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -67,6 +111,9 @@ fn test_style_url_loading() {
 
 #[test]
 fn test_multiple_renderers() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -89,6 +136,9 @@ fn test_multiple_renderers() {
 
 #[test]
 fn test_pixel_ratios() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -111,6 +161,9 @@ fn test_pixel_ratios() {
 
 #[test]
 fn test_cache_path_creation() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -124,7 +177,7 @@ fn test_cache_path_creation() {
     let _renderer = ImageRendererBuilder::new()
         .with_size(width, height)
         .with_pixel_ratio(1.0)
-        .with_cache_path(&cache_path)
+        .with_resource_options(resource_options_with_cache(cache_path.clone()))
         .build_static_renderer();
 
     assert!(true);
@@ -135,6 +188,9 @@ fn test_cache_path_creation() {
 
 #[test]
 fn test_render_static_basic() {
+    if skip_without_display() {
+        return;
+    }
     let _guard = renderer_test_lock().lock().unwrap();
     use maplibre_native::ImageRendererBuilder;
     use std::num::NonZeroU32;
@@ -149,7 +205,8 @@ fn test_render_static_basic() {
         .build_static_renderer();
 
     // Try to render without loading style - this may fail but shouldn't panic
-    let result = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0);
+    let camera = test_camera();
+    let result = renderer.render_static(&camera);
 
     // Just verify we can call the method
     // The result may be Err since we haven't loaded a style

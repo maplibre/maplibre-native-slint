@@ -1,6 +1,8 @@
 use crate::Size;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
+use maplibre_native::tile_server_options::TileServerOptions;
+use maplibre_native::{CameraUpdate, LatLng, ResourceOptions};
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
@@ -43,7 +45,7 @@ struct DragState {
 }
 
 pub struct MapLibre {
-    renderer: ImageRenderer<maplibre_native::Static>,
+    renderer: Option<ImageRenderer<maplibre_native::Static>>,
     last_image: Option<maplibre_native::Image>,
     size: (u32, u32),
     style_url: String,
@@ -55,9 +57,9 @@ pub struct MapLibre {
 }
 
 impl MapLibre {
-    pub fn new(renderer: ImageRenderer<maplibre_native::Static>, size: (u32, u32)) -> Self {
+    fn new_lazy(size: (u32, u32)) -> Self {
         Self {
-            renderer,
+            renderer: None,
             last_image: None,
             size,
             style_url: DEFAULT_STYLE_URL.to_owned(),
@@ -97,13 +99,11 @@ impl MapLibre {
     }
 
     pub fn render_once(&mut self) {
-        if let Ok(image) = self.renderer.render_static(
-            self.camera.lat,
-            self.camera.lon,
-            self.camera.zoom,
-            self.camera.bearing,
-            self.camera.pitch,
-        ) {
+        let camera = camera_update(self.camera);
+        let Some(renderer) = self.renderer_mut() else {
+            return;
+        };
+        if let Ok(image) = renderer.render_static(&camera) {
             self.last_image = Some(image);
             self.frame_updated = true;
             self.style_loaded = true;
@@ -114,7 +114,9 @@ impl MapLibre {
     pub fn load_style(&mut self, style_url: &str) {
         if let Ok(url) = style_url.parse() {
             self.style_url = style_url.to_owned();
-            self.renderer.load_style_from_url(&url);
+            if let Some(renderer) = self.renderer_mut() {
+                renderer.load_style_from_url(&url);
+            }
             self.style_loaded = false;
             self.map_idle = false;
             self.frame_updated = true;
@@ -130,7 +132,7 @@ impl MapLibre {
         }
 
         self.size = new_size;
-        self.renderer = build_renderer(new_size, &self.style_url);
+        self.renderer = None;
         self.map_idle = false;
         self.frame_updated = true;
     }
@@ -194,6 +196,13 @@ impl MapLibre {
         self.camera.zoom = clamp_zoom(self.camera.zoom + delta);
         self.mark_dirty();
     }
+
+    fn renderer_mut(&mut self) -> Option<&mut ImageRenderer<maplibre_native::Static>> {
+        if self.renderer.is_none() {
+            self.renderer = Some(build_renderer(self.size, &self.style_url));
+        }
+        self.renderer.as_mut()
+    }
 }
 
 fn cache_path() -> PathBuf {
@@ -204,6 +213,23 @@ fn safe_size(size: Size) -> (u32, u32) {
     ((size.width as u32).max(1), (size.height as u32).max(1))
 }
 
+fn resource_options() -> ResourceOptions {
+    ResourceOptions::default()
+        .with_tile_server_options(&TileServerOptions::default())
+        .with_cache_path(cache_path())
+}
+
+fn camera_update(camera: MapCamera) -> CameraUpdate {
+    CameraUpdate::new()
+        .center(LatLng {
+            lat: camera.lat,
+            lng: camera.lon,
+        })
+        .zoom(camera.zoom)
+        .bearing(camera.bearing)
+        .pitch(camera.pitch)
+}
+
 fn build_renderer(size: (u32, u32), style_url: &str) -> ImageRenderer<maplibre_native::Static> {
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
@@ -211,7 +237,7 @@ fn build_renderer(size: (u32, u32), style_url: &str) -> ImageRenderer<maplibre_n
             NonZeroU32::new(size.1).unwrap(),
         )
         .with_pixel_ratio(1.0)
-        .with_cache_path(cache_path())
+        .with_resource_options(resource_options())
         .build_static_renderer();
     renderer.load_style_from_url(&style_url.parse().unwrap());
     renderer
@@ -247,8 +273,7 @@ fn degrees_per_pixel(zoom: f64, lat: f64) -> (f64, f64) {
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
     let size = safe_size(size);
-    let renderer = build_renderer(size, DEFAULT_STYLE_URL);
-    Rc::new(RefCell::new(MapLibre::new(renderer, size)))
+    Rc::new(RefCell::new(MapLibre::new_lazy(size)))
 }
 
 #[cfg(test)]
@@ -269,7 +294,7 @@ mod tests {
 
     #[test]
     fn drag_changes_camera_state_in_expected_direction() {
-        let mut map = MapLibre::new(build_renderer((256, 256), DEFAULT_STYLE_URL), (256, 256));
+        let mut map = MapLibre::new_lazy((256, 256));
         map.mouse_pressed(100.0, 100.0);
         map.mouse_moved(110.0, 90.0);
         let camera = map.camera();
@@ -279,7 +304,7 @@ mod tests {
 
     #[test]
     fn wheel_zoom_is_clamped() {
-        let mut map = MapLibre::new(build_renderer((256, 256), DEFAULT_STYLE_URL), (256, 256));
+        let mut map = MapLibre::new_lazy((256, 256));
         map.fly_to(0.0, 0.0, MAX_ZOOM);
         map.wheel_zoomed(-120.0);
         assert_eq!(map.camera().zoom, MAX_ZOOM);

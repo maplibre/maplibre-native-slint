@@ -29,7 +29,7 @@ If you want something that works today, use the C++ path as the reference implem
 - The authoritative backend wiring lives in [`cpp/main.cpp`](cpp/main.cpp)
 - The demo shell lives in [`cpp/map_window.slint`](cpp/map_window.slint)
 
-The Rust demo exists to mirror the same Slint component contract, but it depends on [`maplibre-native-rs`](https://github.com/maplibre/maplibre-native-rs), which is currently only practical on Linux. Treat it as an experimental companion, not the primary integration path.
+The Rust demo exists to mirror the same Slint component contract, but it depends on [`maplibre-native-rs`](https://github.com/maplibre/maplibre-native-rs) and its current 0.8.x API surface. It is still only practical on Linux today. Treat it as an experimental companion, not the primary integration path.
 
 ## Quick Start
 
@@ -125,7 +125,7 @@ What still needs to be provided by the host application is the native backend wi
 
 | Platform | Status | Notes |
 |---|---|---|
-| Linux x86_64 | Experimental | Works well enough for development and validation |
+| Linux x86_64 | Experimental | Tracks `maplibre-native-rs` 0.8.x; best place to validate the Rust path |
 | Windows x64 | Not practical | Blocked by `maplibre-native-rs` maturity |
 | macOS Apple Silicon | Not practical | Blocked by `maplibre-native-rs` maturity |
 
@@ -182,6 +182,12 @@ Relevant test/documentation entrypoints:
 
 - [Testing Guide](docs/testing.md)
 - [Testing Overview](docs/testing_overview.md)
+
+For the Rust backend specifically:
+
+- use Rust 1.90 or newer (`maplibre-native-rs` 0.8.x requires it)
+- on Linux, the default backend is OpenGL and `cargo test` builds `maplibre-native` from source through `maplibre-native-rs`
+- renderer integration tests are opt-in via `MAPLIBRE_NATIVE_SLINT_RUN_RENDERER_TESTS=1` so CI can stay headless by default
 
 For day-to-day validation, the most important checks are:
 

@@ -8,7 +8,7 @@ This implementation is based on the excellent work from [slintmaplibretest](http
 
 ## Prerequisites
 
-- Rust toolchain (edition 2024 or later)
+- Rust 1.90 or newer
 - CMake (required for building MapLibre Native)
 - C++ compiler (required for building MapLibre Native)
 - OpenGL or Metal development libraries (platform-dependent)
@@ -79,9 +79,17 @@ rust/
 
 ## Dependencies
 
-- `slint = "1.14.1"` - UI framework
-- `maplibre_native = "0.4.1"` - Map rendering engine
-- `slint-build = "1.14.1"` - Build-time dependency for Slint compilation
+- `slint = "1.16"` - UI framework
+- `maplibre_native = "0.8.2"` - Map rendering engine
+- `slint-build = "1.16"` - Build-time dependency for Slint compilation
+
+The current Linux development path builds `maplibre-native` from source through `maplibre-native-rs`, defaults to the OpenGL backend, and can take a while on the first build.
+
+Renderer integration tests are opt-in so headless CI can run `cargo test` safely. To exercise the real renderer locally, run:
+
+```bash
+MAPLIBRE_NATIVE_SLINT_RUN_RENDERER_TESTS=1 DISPLAY=:0 cargo test --test integration_tests
+```
 
 ## Troubleshooting
 

@@ -7,6 +7,9 @@ edition = "2024"
 metal = ["maplibre_native/metal"]
 opengl = ["maplibre_native/opengl"]
 vulkan = ["maplibre_native/vulkan"]
+# Enable Slint's linuxkms backend (libseat-free variant) for console /
+# embedded Linux KMS targets (no X11/Wayland).
+linuxkms-noseat = ["slint/backend-linuxkms-noseat"]
 
 [dependencies]
 slint = "1.16"

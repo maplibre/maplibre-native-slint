@@ -9,6 +9,30 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 const DEFAULT_STYLE_URL: &str = "https://demotiles.maplibre.org/style.json";
+
+/// Initial style URL. Overridden by the `MAPLIBRE_STYLE_URL` env var when set.
+fn default_style_url() -> String {
+    std::env::var("MAPLIBRE_STYLE_URL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_STYLE_URL.to_owned())
+}
+
+/// Initial camera. Overridable via `MAPLIBRE_LAT` / `MAPLIBRE_LON` / `MAPLIBRE_ZOOM` env vars.
+fn default_camera() -> MapCamera {
+    let mut c = MapCamera::default();
+    if let Some(v) = std::env::var("MAPLIBRE_LAT").ok().and_then(|s| s.parse().ok()) {
+        c.lat = v;
+    }
+    if let Some(v) = std::env::var("MAPLIBRE_LON").ok().and_then(|s| s.parse().ok()) {
+        c.lon = v;
+    }
+    if let Some(v) = std::env::var("MAPLIBRE_ZOOM").ok().and_then(|s| s.parse().ok()) {
+        c.zoom = clamp_zoom(v);
+    }
+    c
+}
+
 const MIN_ZOOM: f64 = 0.0;
 const MAX_ZOOM: f64 = 22.0;
 const MIN_PITCH: f64 = 0.0;
@@ -62,8 +86,8 @@ impl MapLibre {
             renderer: None,
             last_image: None,
             size,
-            style_url: DEFAULT_STYLE_URL.to_owned(),
-            camera: MapCamera::default(),
+            style_url: default_style_url(),
+            camera: default_camera(),
             drag_state: None,
             style_loaded: false,
             map_idle: false,

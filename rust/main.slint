@@ -16,17 +16,21 @@ export component MapWindow inherits Window {
     callback map-size-changed;
     changed map-size => { map-size-changed(); }
 
-    property <[string]> style-urls: [
+    // Style list shown in the dropdown. Rust prepends MAPLIBRE_STYLE_URL when set.
+    in-out property <[string]> style-urls: [
         "https://demotiles.maplibre.org/style.json",
         "https://tile.openstreetmap.jp/styles/osm-bright/style.json",
     ];
+    // Currently selected style (defaults to the first list entry).
+    property <string> current-style: root.style-urls[0];
 
     VerticalBox {
         HorizontalBox {
             ComboBox {
                 model: root.style-urls;
+                current-index: 0;
                 selected(url) => {
-                    map.style-url = url;
+                    root.current-style = url;
                 }
             }
             Button {
@@ -71,7 +75,7 @@ export component MapWindow inherits Window {
             }
         }
         map := MMapView {
-            style-url: "https://demotiles.maplibre.org/style.json";
+            style-url: root.current-style;
             center-lat: 0;
             center-lon: 0;
             zoom: 1;

@@ -30,6 +30,7 @@ export global MMapAdapter {
     // --- UI -> Backend: commands ---
     callback request-style-change(/* url */ string);
     callback request-fly-to(/* lat */ float, /* lon */ float, /* zoom */ float);
+    callback request-zoom-change(/* zoom */ float);
     callback request-pitch-change(/* pitch */ float);
     callback request-bearing-change(/* bearing */ float);
 }

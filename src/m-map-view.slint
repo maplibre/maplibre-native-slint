@@ -41,6 +41,11 @@ export component MMapView {
     }
 
     // --- public function ---
+    public function set-zoom(zoom: float) {
+        MMapAdapter.request-zoom-change(zoom);
+    }
+
+    // --- public function ---
     public function set-pitch(pitch: float) {
         MMapAdapter.request-pitch-change(pitch);
     }

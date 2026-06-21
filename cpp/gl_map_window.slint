@@ -1,0 +1,105 @@
+// Raspberry Pi / small-touch-panel layout for the zero-copy GL example.
+// Larger touch targets (bigger fonts + a tall toolbar) and a wide right-edge
+// vertical zoom strip so taps land reliably on a low-res resistive panel.
+import { Button, ComboBox, HorizontalBox, VerticalBox, Slider } from "std-widgets.slint";
+import { MMapView, MMapAdapter } from "../src/maplibre.slint";
+
+export { MMapAdapter }
+
+export struct Size {
+    width: length,
+    height: length,
+}
+
+export component MapWindow inherits Window {
+    preferred-width: 720px;
+    preferred-height: 576px;
+    default-font-size: 20px;
+
+    out property<Size> map-size: { width: map.width, height: map.height };
+    callback map-size-changed;
+    changed map-size => { map-size-changed(); }
+
+    property <[string]> style-urls: [
+        "https://demotiles.maplibre.org/style.json",
+        "https://tile.openstreetmap.jp/styles/osm-bright/style.json",
+    ];
+
+    // Outer margin: resistive panels have a dead zone at the very edges, so
+    // keep all interactive controls inset from the screen border.
+    HorizontalBox {
+        padding: 22px;
+        spacing: 10px;
+
+        VerticalBox {
+            horizontal-stretch: 1;
+            padding: 0px;
+            spacing: 6px;
+
+            HorizontalBox {
+                min-height: 64px;
+                max-height: 64px;
+                spacing: 8px;
+                ComboBox {
+                    horizontal-stretch: 2;
+                    model: root.style-urls;
+                    selected(url) => { map.style-url = url; }
+                }
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Paris";
+                    clicked => { map.fly-to(48.8566, 2.3522, 10); }
+                }
+                Button {
+                    horizontal-stretch: 1;
+                    text: "NY";
+                    clicked => { map.fly-to(40.7128, -74.0060, 10); }
+                }
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Tokyo";
+                    clicked => { map.fly-to(35.6895, 139.6917, 10); }
+                }
+            }
+
+            map := MMapView {
+                style-url: "https://demotiles.maplibre.org/style.json";
+                center-lat: 0;
+                center-lon: 0;
+                zoom: 1;
+            }
+        }
+
+        // Wide right-edge vertical zoom strip (easy to hit on resistive touch).
+        VerticalBox {
+            horizontal-stretch: 0;
+            min-width: 120px;
+            max-width: 120px;
+            padding: 8px;
+            spacing: 10px;
+
+            Button {
+                min-height: 56px;
+                text: "+";
+                clicked => {
+                    MMapAdapter.wheel-zoomed(map.width / 2 / 1px, map.height / 2 / 1px, -1);
+                }
+            }
+            Slider {
+                orientation: vertical;
+                vertical-stretch: 1;
+                minimum: 1;
+                maximum: 18;
+                value: 10;
+                changed value => { map.set-zoom(self.value); }
+            }
+            Button {
+                min-height: 56px;
+                text: "-";
+                clicked => {
+                    MMapAdapter.wheel-zoomed(map.width / 2 / 1px, map.height / 2 / 1px, 1);
+                }
+            }
+        }
+    }
+}

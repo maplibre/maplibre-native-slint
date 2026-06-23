@@ -98,3 +98,19 @@ Verified on a Raspberry Pi 4 (Debian trixie, aarch64, V3D / `vc4-kms-v3d`) with 
   on-screen zoom buttons/slider.
 - maplibre-native renders on the Pi's V3D GPU, composited zero-copy by Slint;
   the `flyTo` camera animation stays smooth.
+
+A few integration details matter when extending the zero-copy GL example on V3D:
+
+- **Re-render every frame.** V3D is a tiled GPU and treats the FBO colour
+  attachment as transient: skipping `frontend->render()` on idle frames discards
+  the borrowed texture and the map turns white or black. Drive a repaint every
+  frame rather than only on map invalidation.
+- **Save and restore GL state around the render.** Slint's FemtoVG renderer
+  shares the GL context, so the `BeforeRendering` callback snapshots and restores
+  the framebuffer binding, viewport, current program, array/element buffer
+  bindings, active texture, and the `BLEND`/`DEPTH_TEST`/`SCISSOR_TEST`/`CULL_FACE`
+  enables around `frontend->render()`. Without that, Slint's own drawing is
+  corrupted.
+- **Borrowed-texture size.** A borrowed GL texture is composited at its native
+  size (it is not scaled to the element via `image-fit`), so create the FBO at
+  the display resolution.

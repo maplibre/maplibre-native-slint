@@ -22,7 +22,6 @@ cmake --build build
 - `main.cpp` — application entry point and UI wiring
 - `map_window.slint` — Slint UI definition that generates `map_window.h`
 - `src/slint_maplibre_headless.*` — MapLibre headless integration and rendering
-- `platform/custom_file_source.*` — optional HTTP file source using CPR
 
 ## Zero-copy OpenGL example (`maplibre-slint-gl`)
 

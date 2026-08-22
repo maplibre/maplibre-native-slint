@@ -10,13 +10,11 @@
 #
 add_library(mbgl-slint STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/slint_maplibre_headless.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/custom_file_source.cpp
 )
 add_library(maplibre-native-slint::mbgl-slint ALIAS mbgl-slint)
 
 target_include_directories(mbgl-slint PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform
     ${PROJECT_SOURCE_DIR}/vendor/maplibre-native/include
     ${PROJECT_BINARY_DIR}/vendor/maplibre-native/include
 )
@@ -108,7 +106,6 @@ if(MLN_WITH_OPENGL AND NOT APPLE AND NOT WIN32)
         main_gl.cpp
         src/slint_map_gl.cpp
         src/slint_gl_backend.cpp
-        platform/custom_file_source.cpp
     )
 
     # This target has its own Slint UI (Pi layout); generates gl_map_window.h.
@@ -123,7 +120,6 @@ if(MLN_WITH_OPENGL AND NOT APPLE AND NOT WIN32)
     target_include_directories(maplibre-slint-gl
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/platform
             ${PROJECT_SOURCE_DIR}/vendor/maplibre-native/include
             ${CMAKE_BINARY_DIR}/vendor/maplibre-native/include
             ${CMAKE_CURRENT_BINARY_DIR}

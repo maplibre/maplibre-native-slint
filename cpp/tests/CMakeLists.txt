@@ -4,9 +4,8 @@
 find_package(Threads REQUIRED)
 
 # The backend under test comes from the reusable mbgl-slint library, which
-# propagates Slint / mbgl-core / cpr / GL include dirs and link deps.
+# propagates Slint / mbgl-core / GL include dirs and link deps.
 add_executable(unit-tests
-    unit/custom_file_source_test.cpp
     unit/slint_maplibre_headless_test.cpp
     unit/integration_test.cpp
     unit/test_main.cpp

@@ -54,7 +54,6 @@ tests/
 ├── unit/                      # Unit tests
 │   ├── simple_unit_test.cpp   # Simple tests (no OpenGL)
 │   ├── slint_maplibre_headless_test.cpp
-│   ├── custom_file_source_test.cpp
 │   ├── custom_run_loop_test.cpp
 │   └── test_main.cpp          # GoogleTest main
 └── integration/               # Integration tests
@@ -79,13 +78,6 @@ tests/
 - Resize operations
 - Mouse interaction handling
 - Render method behavior
-
-#### CustomFileSource Tests (`unit/custom_file_source_test.cpp`)
-- HTTP/HTTPS resource requests
-- Resource validation
-- Request cancellation
-- Multiple simultaneous requests
-- Error handling
 
 #### CustomRunLoop Tests (`unit/custom_run_loop_test.cpp`)
 - Run loop creation and management
@@ -257,18 +249,11 @@ export MESA_GLSL_VERSION_OVERRIDE=330
 ### 🔧 Example Test Results
 ```bash
 $ ./tests/simple-unit-tests
-[==========] Running 4 tests from 2 test suites.
+[==========] Running 1 test from 1 test suite.
 [----------] 1 test from SimpleCustomRunLoopTest
 [ RUN      ] SimpleCustomRunLoopTest.Construction
 [       OK ] SimpleCustomRunLoopTest.Construction (0 ms)
-[----------] 3 tests from SimpleCustomFileSourceTest
-[ RUN      ] SimpleCustomFileSourceTest.Construction
-[       OK ] SimpleCustomFileSourceTest.Construction (0 ms)
-[ RUN      ] SimpleCustomFileSourceTest.OptionsAccess
-[       OK ] SimpleCustomFileSourceTest.OptionsAccess (0 ms)
-[ RUN      ] SimpleCustomFileSourceTest.CanRequestSimple
-[       OK ] SimpleCustomFileSourceTest.CanRequestSimple (0 ms)
-[  PASSED  ] 4 tests.
+[  PASSED  ] 1 test.
 ```
 
 ## Troubleshooting

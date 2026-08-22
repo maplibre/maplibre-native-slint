@@ -10,19 +10,7 @@ The test suite is organized into the following categories:
 
 Unit tests verify individual components in isolation:
 
-#### 1. Custom File Source Tests (`tests/unit/custom_file_source_test.cpp`)
-
-Tests for the `CustomFileSource` class, which handles HTTP/HTTPS resource requests for MapLibre:
-
-- **Basic Operations**: Constructor, destructor, resource options, client options
-- **Resource Validation**: URL validation, protocol checking (HTTP/HTTPS), resource type filtering
-- **Request Handling**: Synchronous and asynchronous requests, request cancellation, simultaneous requests
-- **Edge Cases**: Empty URLs, invalid URLs, special characters, international characters, very long URLs
-- **Error Handling**: Network errors, invalid domains, HTTP status codes
-
-**Test Count**: 20+ test cases
-
-#### 2. SlintMapLibre Headless Tests (`tests/unit/slint_maplibre_headless_test.cpp`)
+#### 1. SlintMapLibre Headless Tests (`tests/unit/slint_maplibre_headless_test.cpp`)
 
 Tests for the `SlintMapLibre` class, which integrates MapLibre with Slint UI:
 
@@ -37,18 +25,18 @@ Tests for the `SlintMapLibre` class, which integrates MapLibre with Slint UI:
 
 **Test Count**: 30+ test cases
 
-#### 3. Integration Tests (`tests/unit/integration_test.cpp`)
+#### 2. Integration Tests (`tests/unit/integration_test.cpp`)
 
-Tests that verify multiple components working together:
+Tests that verify the map behaves correctly across longer sequences of use:
 
-- **Component Lifecycle**: Initialization and destruction of multiple components
-- **File Source and Map Interaction**: Resource handling during map operations
-- **Concurrent Operations**: Simultaneous file source requests and map interactions
-- **Stress Testing**: Many operations and requests at once
-- **Resource Types**: All MapLibre resource types with file source
-- **Animation Integration**: Map animations while file source is active
+- **Component Lifecycle**: Initialization and destruction of multiple maps
+- **Style Loading**: Setting a style URL on an initialized map
+- **Interaction and Rendering**: Mouse, wheel and camera operations followed by a render
+- **Resize**: Rendering across size changes
+- **Animation Integration**: Fly-to animation driven by animation ticks
+- **Stress Testing**: Many interactions in sequence
 
-**Test Count**: 15+ test cases
+**Test Count**: 9 test cases
 
 ## Running Tests
 
@@ -76,23 +64,22 @@ cmake --build build --target unit-tests
 ./build/Debug/unit-tests --gtest_verbose
 
 # Run specific test suite
-./build/Debug/unit-tests --gtest_filter=CustomFileSourceTest.*
+./build/Debug/unit-tests --gtest_filter=IntegrationTest.*
 
 # Run specific test case
-./build/Debug/unit-tests --gtest_filter=CustomFileSourceTest.CanRequestHttpResource
+./build/Debug/unit-tests --gtest_filter=IntegrationTest.MapRendering
 ```
 
 ## Test Coverage
 
 The test suite covers:
 
-- ✅ Custom file source HTTP/HTTPS request handling
 - ✅ MapLibre initialization and lifecycle
 - ✅ User interaction handling (mouse, wheel)
 - ✅ Camera controls (pitch, bearing, zoom)
 - ✅ Map rendering
 - ✅ Animation system
-- ✅ Integration between file source and map
+- ✅ Integration across map lifecycle, interaction and rendering
 - ✅ Edge cases and error handling
 
 ## Adding New Tests

@@ -1,12 +1,11 @@
 #include "slint_maplibre_headless.hpp"
 
-#include "host_gl_context_guard.hpp"
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <memory>
 
+#include "host_gl_context_guard.hpp"
 #include "mbgl/gfx/backend_scope.hpp"
 #include "mbgl/map/bound_options.hpp"
 #include "mbgl/map/camera.hpp"

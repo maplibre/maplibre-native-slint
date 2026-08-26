@@ -37,8 +37,7 @@ const WglApi& wgl_api() {
                 reinterpret_cast<void*>(
                     GetProcAddress(module, "wglGetCurrentContext")));
         a.make_current = reinterpret_cast<decltype(a.make_current)>(
-            reinterpret_cast<void*>(
-                GetProcAddress(module, "wglMakeCurrent")));
+            reinterpret_cast<void*>(GetProcAddress(module, "wglMakeCurrent")));
         return a;
     }();
     return api;

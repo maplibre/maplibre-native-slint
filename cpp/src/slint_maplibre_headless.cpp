@@ -1,5 +1,7 @@
 #include "slint_maplibre_headless.hpp"
 
+#include "host_gl_context_guard.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -20,6 +22,10 @@ SlintMapLibre::SlintMapLibre() {
 }
 
 SlintMapLibre::~SlintMapLibre() {
+    // Tearing down the WebGPU device re-enters wgpu, so keep the host
+    // toolkit's GL context pinned across it.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     // Orderly shutdown: first, unregister the observer to prevent dangling
     // references.
     if (frontend) {
@@ -32,6 +38,11 @@ SlintMapLibre::~SlintMapLibre() {
 }
 
 void SlintMapLibre::initialize(int w, int h) {
+    // Slint calls this from a layout/draw pass, and creating the MapLibre
+    // backend below makes wgpu enumerate its GLES adapter, which unbinds the
+    // renderer's GL context. See HostGLContextGuard.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     width = w;
     height = h;
 
@@ -180,6 +191,8 @@ void SlintMapLibre::setStyleUrl(const std::string& url) {
 }
 
 slint::Image SlintMapLibre::render_map() {
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     std::cout << "render_map() called" << std::endl;
 
     if (!map || !frontend) {
@@ -265,6 +278,8 @@ slint::Image SlintMapLibre::render_map() {
 }
 
 void SlintMapLibre::resize(int w, int h) {
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     width = w;
     height = h;
 
@@ -364,6 +379,10 @@ void SlintMapLibre::set_bearing(float bearing_value) {
 }
 
 void SlintMapLibre::run_map_loop() {
+    // Pumping the run loop drains MapLibre's async invalidate, which renders
+    // a frame through the backend.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     if (run_loop) {
         run_loop->runOnce();
     } else {

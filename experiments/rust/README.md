@@ -1,4 +1,13 @@
-# MapLibre Native Slint - Rust Implementation
+# MapLibre Native Slint - Rust Implementation (experiment)
+
+> This is an experiment. It is not the supported way to use this repository.
+>
+> - The supported path is the C++ one in [`cpp/`](../../cpp/). Start there.
+> - This does not remove the C++ dependency. `maplibre-native-rs` builds MapLibre
+>   Native from source, so you still need CMake and a C++ toolchain, and the
+>   build takes as long as the C++ path does.
+> - It is exercised on Linux. Other platforms are not covered.
+> - It may be broken at any moment, and it will be deleted if it leads nowhere.
 
 A Rust-based interactive map viewer using [MapLibre Native](https://github.com/maplibre/maplibre-native) for rendering and [Slint](https://slint.dev/) for the user interface.
 

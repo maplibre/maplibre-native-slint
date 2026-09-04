@@ -6,10 +6,13 @@
 #include <functional>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_observer.hpp>
+#include <mbgl/renderer/query.hpp>
 #include <mbgl/renderer/renderer_observer.hpp>
+#include <mbgl/util/feature.hpp>
 #include <mbgl/util/run_loop.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "slint_gl_backend.hpp"
 
@@ -64,6 +67,20 @@ public:
     void handle_mouse_move(float x, float y, bool pressed);
     void handle_wheel_zoom(float x, float y, float dy);
     void handle_double_click(float x, float y, bool shift);
+
+    // Features of the already-rendered frame under a screen point.
+    //
+    // Answers "what is the user pointing at", which is the question behind
+    // hover tooltips, click inspectors, POI selection and feature
+    // identification. Synchronous and CPU-side: it reads the frame that has
+    // already been rendered rather than drawing anything, so it does not need
+    // the GL context to be current.
+    //
+    // Empty options mean every layer; narrow with
+    // RenderedQueryOptions::layerIDs and ::filter. The result is empty, not an
+    // error, when nothing has been rendered yet or nothing is under the point.
+    std::vector<mbgl::Feature> query_rendered_features(
+        float x, float y, const mbgl::RenderedQueryOptions& options = {}) const;
 
     // Commands from the toolbar (dropdown / buttons / sliders).
     void setStyleUrl(const std::string& url);

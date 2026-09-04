@@ -13,6 +13,8 @@
 #include <mbgl/util/chrono.hpp>
 #include <mbgl/util/geo.hpp>
 
+#include "host_gl_context_guard.hpp"
+
 SlintMapGL::~SlintMapGL() {
     // Orderly shutdown: detach observer, then drop map before frontend/backend.
     if (frontend) {
@@ -133,6 +135,24 @@ void SlintMapGL::handle_double_click(float x, float y, bool shift) {
     map->jumpTo(mbgl::CameraOptions().withCenter(ll).withZoom(z));
     map->triggerRepaint();
     repaint = true;
+}
+
+// --- Feature queries ---
+std::vector<mbgl::Feature> SlintMapGL::query_rendered_features(
+    float x, float y, const mbgl::RenderedQueryOptions& options) const {
+    if (!frontend)
+        return {};
+    mbgl::Renderer* renderer = frontend->getRenderer();
+    if (!renderer)
+        return {};
+    // Guarded like every other call into MapLibre from this library. The query
+    // itself does not draw, but the caller for this API is a pointer callback
+    // -- which is exactly the "issued from inside a Slint layout or draw pass"
+    // case HostGLContextGuard exists for. The guard is a no-op when nothing
+    // disturbed the context.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+    return renderer->queryRenderedFeatures(mbgl::ScreenCoordinate{x, y},
+                                           options);
 }
 
 // --- Toolbar commands ---

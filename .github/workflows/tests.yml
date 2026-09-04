@@ -9,13 +9,32 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    # The label, rather than the matrix values, so the existing
+    # "Run Tests (Release)" and "Run Tests (Debug)" check names do not change.
+    name: Run Tests (${{ matrix.label }})
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        build_type: [Release, Debug]
-    
+        # The runner ships the Vulkan loader but no ICD, so wgpu enumerates no
+        # Vulkan adapter and settles on GL (llvmpipe). That is a real code path
+        # and worth keeping, but it is only one of the two: with an ICD present
+        # wgpu picks Vulkan and the GLES adapter is merely probed and dropped.
+        # HostGLContextGuard has to hold in both cases, so cover both.
+        include:
+          - build_type: Release
+            label: Release
+            slug: release
+            vulkan_icd: false
+          - build_type: Debug
+            label: Debug
+            slug: debug
+            vulkan_icd: false
+          - build_type: Release
+            label: Release, Vulkan
+            slug: release-vulkan
+            vulkan_icd: true
+
     steps:
     - name: Install dependencies
       run: |
@@ -59,6 +78,19 @@ jobs:
           lcov \
           clang
 
+    - name: Install a Vulkan ICD
+      if: matrix.vulkan_icd
+      run: sudo apt-get install -y mesa-vulkan-drivers
+
+    - name: Report which rendering backend wgpu will pick
+      run: |
+        if ls /usr/share/vulkan/icd.d/*.json >/dev/null 2>&1; then
+          echo "Vulkan ICDs present, wgpu will select Vulkan:"
+          ls /usr/share/vulkan/icd.d
+        else
+          echo "No Vulkan ICD, wgpu will fall back to GL (llvmpipe)"
+        fi
+
     - name: Setup Rust
       uses: actions-rust-lang/setup-rust-toolchain@v1
 
@@ -70,7 +102,7 @@ jobs:
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
-        key: ${{ matrix.build_type }}
+        key: ${{ matrix.slug }}
 
     - name: Cache Submodules
       uses: actions/cache@v4
@@ -87,9 +119,9 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           build/_deps
-        key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('**/CMakeLists.txt') }}
+        key: ${{ runner.os }}-build-${{ matrix.slug }}-${{ hashFiles('**/CMakeLists.txt') }}
         restore-keys: |
-          ${{ runner.os }}-build-${{ matrix.build_type }}-
+          ${{ runner.os }}-build-${{ matrix.slug }}-
           ${{ runner.os }}-build-
     
     - name: Configure CMake
@@ -117,7 +149,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-results-${{ matrix.build_type }}
+        name: test-results-${{ matrix.slug }}
         path: |
           build/Testing/Temporary/LastTest.log
           build/Testing/Temporary/LastTestsFailed.log

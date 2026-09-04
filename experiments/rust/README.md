@@ -66,7 +66,7 @@ Or directly:
 ## Project Structure
 
 ```
-rust/
+experiments/rust/
 ├── build.rs           # Build script for Slint compilation
 ├── main.slint         # Slint UI definition
 ├── Cargo.toml         # Rust dependencies

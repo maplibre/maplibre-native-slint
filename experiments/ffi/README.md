@@ -3,7 +3,7 @@
 > This is an experiment. Nothing here is guaranteed to work.
 >
 > - It is not wired into this repository's build or CI, and it does not replace `cpp/`.
-> - It sits alongside `rust/` as an experiment, and will be deleted if it leads nowhere.
+> - It sits alongside `experiments/rust/` as an experiment, and will be deleted if it leads nowhere.
 > - It stands on [maplibre-native-ffi](https://github.com/maplibre/maplibre-native-ffi),
 >   itself an experimental C API whose ABI is declared unstable while
 >   `mln_c_version()` returns `0`.
@@ -26,19 +26,19 @@ setup with it.
 
 ```bash
 # smoke, EGL
-ffi/scripts/fetch-artifact.sh
-cmake -S ffi/smoke -B ffi/build-egl -DMLN_FFI_TARGET=linux-x64-egl
-cmake --build ffi/build-egl && ./ffi/build-egl/mln-ffi-smoke
+experiments/ffi/scripts/fetch-artifact.sh
+cmake -S experiments/ffi/smoke -B experiments/ffi/build-egl -DMLN_FFI_TARGET=linux-x64-egl
+cmake --build experiments/ffi/build-egl && ./experiments/ffi/build-egl/mln-ffi-smoke
 
 # smoke, Vulkan
-MLN_FFI_TARGET=linux-x64-vulkan ffi/scripts/fetch-artifact.sh
-cmake -S ffi/smoke -B ffi/build-vulkan -DMLN_FFI_TARGET=linux-x64-vulkan
-cmake --build ffi/build-vulkan && ./ffi/build-vulkan/mln-ffi-smoke
+MLN_FFI_TARGET=linux-x64-vulkan experiments/ffi/scripts/fetch-artifact.sh
+cmake -S experiments/ffi/smoke -B experiments/ffi/build-vulkan -DMLN_FFI_TARGET=linux-x64-vulkan
+cmake --build experiments/ffi/build-vulkan && ./experiments/ffi/build-vulkan/mln-ffi-smoke
 
 # the Slint example, which for now needs Slint on its software renderer
-cmake -S ffi/example -B ffi/build-example -DMLN_FFI_TARGET=linux-x64-egl
-cmake --build ffi/build-example
-SLINT_BACKEND=winit-software ./ffi/build-example/mln-ffi-example
+cmake -S experiments/ffi/example -B experiments/ffi/build-example -DMLN_FFI_TARGET=linux-x64-egl
+cmake --build experiments/ffi/build-example
+SLINT_BACKEND=winit-software ./experiments/ffi/build-example/mln-ffi-example
 ```
 
 The example does not build Slint. It uses the `libslint_cpp.so` and
@@ -46,7 +46,7 @@ The example does not build Slint. It uses the `libslint_cpp.so` and
 repository's `build/_deps/slint-build`, so configuring `cpp/` once is enough.
 
 `linux-arm64-egl` and `linux-arm64-vulkan` select the same way, untried.
-`ffi/third_party` and `ffi/build*` are not tracked.
+`experiments/ffi/third_party` and `experiments/ffi/build*` are not tracked.
 
 ## Results
 
@@ -128,4 +128,4 @@ use `mln_opengl_borrowed_texture_attach()`. That is the next thing to try.
 1. Coexist with Slint's GL renderer, by sharing its context or rendering into a
    texture it owns.
 2. Follow window resizes, and connect mouse pan and wheel zoom.
-3. With those done, `cpp/`, `rust/` and `ffi/` can be compared side by side.
+3. With those done, `cpp/`, `experiments/rust/` and `experiments/ffi/` can be compared side by side.

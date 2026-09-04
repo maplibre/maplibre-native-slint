@@ -62,28 +62,28 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('rust/**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('experiments/rust/**/Cargo.lock') }}
       
       - name: Cache cargo index
         uses: actions/cache@v5
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('rust/**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('experiments/rust/**/Cargo.lock') }}
       
       - name: Cache cargo build
         uses: actions/cache@v5
         with:
-          path: rust/target
-          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('rust/**/Cargo.lock') }}
+          path: experiments/rust/target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('experiments/rust/**/Cargo.lock') }}
       
       - name: Build
         env:
           MLN_CMAKE_CXX_LAUNCHER: ccache
         run: cargo build --verbose
-        working-directory: ./rust
+        working-directory: ./experiments/rust
       
       - name: Run tests
         env:
           MLN_CMAKE_CXX_LAUNCHER: ccache
         run: cargo test --verbose
-        working-directory: ./rust
+        working-directory: ./experiments/rust

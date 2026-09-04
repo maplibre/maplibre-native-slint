@@ -12,9 +12,9 @@ set_property(CACHE MLN_FFI_TARGET PROPERTY STRINGS
 # Reuse a Slint that has already been built rather than building it again. The
 # repository's own build tree has one under build/_deps once cpp/ has been
 # configured; point this elsewhere to use a different one.
-set(MLN_FFI_SLINT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/_deps/slint-build"
+set(MLN_FFI_SLINT_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../build/_deps/slint-build"
     CACHE PATH "Directory holding libslint_cpp.so and slint-compiler")
-set(MLN_FFI_SLINT_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../build/_deps/slint-src"
+set(MLN_FFI_SLINT_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../build/_deps/slint-src"
     CACHE PATH "Slint source checkout, for its C++ API headers")
 
 set(prefix "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/maplibre-native-c-${MLN_FFI_TARGET}")

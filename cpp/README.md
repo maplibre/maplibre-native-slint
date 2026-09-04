@@ -1,6 +1,6 @@
 # MapLibre Native Slint - C++ Implementation
 
-This directory hosts the C++ version of the MapLibre Native + Slint example. It mirrors the Rust implementation under `rust/` but uses the C++ MapLibre API and the Slint C++ bindings.
+This directory hosts the C++ version of the MapLibre Native + Slint example. It mirrors the Rust implementation under `experiments/rust/` but uses the C++ MapLibre API and the Slint C++ bindings.
 
 ## Build
 
@@ -19,9 +19,9 @@ cmake --build build
 
 ## Files
 
-- `main.cpp` — application entry point and UI wiring
-- `map_window.slint` — Slint UI definition that generates `map_window.h`
-- `src/slint_maplibre_headless.*` — MapLibre headless integration and rendering
+- `main.cpp`: application entry point and UI wiring
+- `map_window.slint`: Slint UI definition that generates `map_window.h`
+- `src/slint_maplibre_headless.*`: MapLibre headless integration and rendering
 
 ## Zero-copy OpenGL example (`maplibre-slint-gl`)
 

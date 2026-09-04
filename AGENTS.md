@@ -1,53 +1,43 @@
-# Agent Operating Guidelines
+# AGENTS.md
 
-This document outlines the core operational principles and constraints for the AI agent interacting with this repository.
+Read [README.md](README.md) first. It says what this repository is, which parts
+are supported, which are experiments, and how to build and run them. Read
+[AI_POLICY.md](AI_POLICY.md) before opening a pull request or writing in an
+issue.
 
-## Security Constraints
+This file covers only what an agent needs on top of those two. Where the two
+disagree with this file, they win.
 
-### Sudo Prohibition
+## Operating rules
 
-Under no circumstances is the agent permitted to execute commands using `sudo`. Any operation requiring elevated privileges must be performed manually by the user. This is a critical safety protocol to prevent unintended system modifications.
+- Never run `sudo`. Anything needing elevated privileges is for the user to do.
+- Run `clang-format` on C++ files you touch. `vendor`, `build` and `.git` are
+  excluded:
 
-## Code Formatting
+  ```bash
+  find . -name "*.cpp" -o -name "*.hpp" | grep -v "^./vendor/" | grep -v "^./build/" | grep -v "^./.git/" | xargs clang-format -i
+  ```
 
-### C++
+- Write code comments, commit messages, branch names and pull request
+  descriptions in English.
+- Follow [the pull request template](.github/PULL_REQUEST_TEMPLATE.md),
+  including its `AI assistance` section.
 
-When making changes to C++ files (`.cpp`, `.hpp`), it is mandatory to run `clang-format` to ensure code style consistency.
+## Invariants
 
-**Important:** The `vendor`, `build`, and `.git` directories must be excluded from formatting.
-
-You can format all relevant files using the following command:
-
-```bash
-find . -name "*.cpp" -o -name "*.hpp" | grep -v "^./vendor/" | grep -v "^./build/" | grep -v "^./.git/" | xargs clang-format -i
-```
-
-## Build and Run (macOS)
-
-The following are the trial-and-error steps used on macOS:
-
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode .
-cmake --build build
-./build/Debug/maplibre-slint-example
-```
-
-## Contribution Guidelines
-
-- Comments in code: Must be written in English.
-- Commit messages: Must be written in English.
-- Pull Request description: Must be written in English.
-- PR template: Use `.github/PULL_REQUEST_TEMPLATE.md` for all pull requests.
-- Branch names: Must be written in English.
-
-## Creating a Pull Request
-
-When the user requests to "create a pull request for the current work", follow these steps:
-
-- Verify repository state: Run `git status` and `git branch` to review changes and current branch.
-- Create a new branch: Use a clear English name (e.g., `git checkout -b feature/update-agents-doc`).
-- Commit changes: Use a clear, English commit message (e.g., `git add -A && git commit -m "docs: update AGENTS.md with macOS steps and contribution rules"`).
-- Push the branch: `git push -u origin <branch-name>`.
-- Create the PR:
-  - If GitHub CLI (`gh`) is available: `gh pr create --base main --head <branch-name> --title "<English title>" --body-file .github/PULL_REQUEST_TEMPLATE.md` and fill the template sections appropriately.
-  - Otherwise: open a PR via GitHub UI and ensure the description follows `.github/PULL_REQUEST_TEMPLATE.md` in English.
+- A green `cargo test` is not evidence that anything rendered. The renderer
+  tests in `experiments/rust/tests/` skip themselves unless both
+  `MAPLIBRE_NATIVE_SLINT_RUN_RENDERER_TESTS=1` and a display are set, and CI
+  sets neither.
+- Passing renderer tests are not evidence either. They exercise MapLibre on its
+  own, and some failures need the toolkit's renderer live in the same process.
+  Only running the app reaches those. A graphics change is verified by running
+  the app, not by a test summary.
+- Say which platform and render backend you actually ran, and which parts you
+  only reasoned about. Most of the hard problems here are where MapLibre
+  Native, Slint and a graphics backend meet, and they do not show up in a diff.
+- `experiments/` is not the supported path. Do not treat it as one, and do not
+  make CI slower or heavier on its behalf.
+- `experiments/rust/Cargo.lock` is tracked. Deleting it moves Slint as well as
+  the crate you meant to move, which leaves two variables in any comparison.
+  Use `cargo update -p <crate> --precise <version>` instead.

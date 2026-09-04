@@ -4,6 +4,20 @@ This repository is a working reference for using [MapLibre Native](https://githu
 
 The important thing here is not packaging polish. The important thing is that the combination actually works today across desktop platforms, with a reusable Slint component surface in [`src/`](src/).
 
+## Supported Path and Experiments
+
+Two directories are the repository:
+
+- [`src/`](src/) is the reusable Slint component API.
+- [`cpp/`](cpp/) is the backend that implements it, and the demo that uses it. It needs the MapLibre Native git submodule, so clone with `--recursive`.
+
+Everything under [`experiments/`](experiments/) is an experiment. It is not supported, it may be broken at any moment, and it will be deleted if it leads nowhere:
+
+- [`experiments/rust/`](experiments/rust/) reaches MapLibre through `maplibre-native-rs`. It is not a way to build this without C++: the crate builds MapLibre Native from source underneath.
+- [`experiments/ffi/`](experiments/ffi/) explores the experimental C API from `maplibre-native-ffi`.
+
+Contributors and coding agents should also read [AGENTS.md](AGENTS.md) and [AI_POLICY.md](AI_POLICY.md).
+
 ## What This Repository Is
 
 - A reusable Slint component library centered on [`src/maplibre.slint`](src/maplibre.slint)

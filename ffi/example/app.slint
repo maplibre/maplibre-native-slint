@@ -1,0 +1,32 @@
+import { Button } from "std-widgets.slint";
+
+export component MapWindow inherits Window {
+    in property <image> map-image;
+    in property <string> status: "starting";
+    in-out property <bool> running: true;
+
+    callback zoom-in();
+    callback zoom-out();
+
+    title: "maplibre-native-ffi + Slint";
+    preferred-width: 800px;
+    preferred-height: 600px;
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 6px;
+            spacing: 6px;
+            alignment: start;
+            Button { text: "-"; clicked => { root.zoom-out(); } }
+            Button { text: "+"; clicked => { root.zoom-in(); } }
+            Text {
+                text: root.status;
+                vertical-alignment: center;
+            }
+        }
+        Image {
+            source: root.map-image;
+            image-fit: contain;
+        }
+    }
+}

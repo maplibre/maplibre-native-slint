@@ -113,6 +113,8 @@ export component MMapView {
                     MMapAdapter.mouse-released(self.mouse-x / 1px, self.mouse-y / 1px);
                 } else if e.kind == PointerEventKind.move && self.pressed {
                     MMapAdapter.mouse-moved(self.mouse-x / 1px, self.mouse-y / 1px);
+                } else if e.kind == PointerEventKind.move && !self.pressed {
+                    MMapAdapter.mouse-hovered(self.mouse-x / 1px, self.mouse-y / 1px);
                 }
             }
 

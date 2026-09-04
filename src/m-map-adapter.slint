@@ -24,6 +24,13 @@ export global MMapAdapter {
     callback mouse-pressed(/* x */ float, /* y */ float);
     callback mouse-released(/* x */ float, /* y */ float);
     callback mouse-moved(/* x */ float, /* y */ float);
+    // Movement with no button held. Slint already delivers this as
+    // PointerEventKind.move; MMapView used to forward it only while pressed,
+    // so a plain hover reached the backend nowhere. Separate from mouse-moved
+    // rather than folded into it, because the two mean different things: one
+    // is a drag in progress, the other is a cursor asking what is under it.
+    // Backends can leave it unconnected.
+    callback mouse-hovered(/* x */ float, /* y */ float);
     callback wheel-zoomed(/* x */ float, /* y */ float, /* delta */ float);
     callback double-clicked(/* x */ float, /* y */ float, /* shift */ bool);
 

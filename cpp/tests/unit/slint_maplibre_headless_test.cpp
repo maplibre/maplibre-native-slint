@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <thread>
+#include <vector>
 
 class SlintMapLibreTest : public ::testing::Test {
 protected:
@@ -22,6 +23,26 @@ TEST_F(SlintMapLibreTest, ConstructorDestructor) {
     EXPECT_NE(map, nullptr);
 
     map.reset();
+}
+
+TEST_F(SlintMapLibreTest, QueryRenderedFeaturesBeforeInitializeIsEmpty) {
+    // Nothing has been rendered, so there is nothing under the point. That is
+    // an answer, not a failure: a hover callback fires long before the first
+    // frame and must not have to guard against this itself.
+    EXPECT_TRUE(slint_map->query_rendered_features(10.0f, 10.0f).empty());
+}
+
+TEST_F(SlintMapLibreTest, QueryRenderedFeaturesBeforeInitializeDoesNotThrow) {
+    EXPECT_NO_THROW(slint_map->query_rendered_features(0.0f, 0.0f));
+}
+
+TEST_F(SlintMapLibreTest, QueryRenderedFeaturesAcceptsLayerFilter) {
+    // The options are the caller's way of narrowing the query, and passing
+    // them must compile and behave the same as passing none.
+    mbgl::RenderedQueryOptions options;
+    options.layerIDs = {std::vector<std::string>{"water"}};
+    EXPECT_TRUE(
+        slint_map->query_rendered_features(10.0f, 10.0f, options).empty());
 }
 
 TEST_F(SlintMapLibreTest, Initialize) {

@@ -10,6 +10,7 @@
 #include "mbgl/gfx/backend_scope.hpp"
 #include "mbgl/map/bound_options.hpp"
 #include "mbgl/map/camera.hpp"
+#include "mbgl/renderer/renderer.hpp"
 #include "mbgl/style/style.hpp"
 #include "mbgl/util/geo.hpp"
 #include "mbgl/util/logging.hpp"
@@ -415,6 +416,17 @@ void SlintMapLibre::set_bearing(float bearing_value) {
 
     map->jumpTo(next);
     map->triggerRepaint();
+}
+
+std::vector<mbgl::Feature> SlintMapLibre::query_rendered_features(
+    float x, float y, const mbgl::RenderedQueryOptions& options) const {
+    if (!frontend)
+        return {};
+    // Same guard as run_map_loop(): this is called from pointer callbacks,
+    // i.e. from inside the host toolkit's own event handling.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+    return frontend->getRenderer()->queryRenderedFeatures(
+        mbgl::ScreenCoordinate{x, y}, options);
 }
 
 void SlintMapLibre::run_map_loop() {

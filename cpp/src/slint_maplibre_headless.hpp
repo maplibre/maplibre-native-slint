@@ -11,9 +11,12 @@
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_observer.hpp>
 #include <mbgl/map/map_options.hpp>
+#include <mbgl/renderer/query.hpp>
 #include <mbgl/renderer/renderer_observer.hpp>
 #include <mbgl/storage/resource_options.hpp>
+#include <mbgl/util/feature.hpp>
 #include <mbgl/util/run_loop.hpp>
+#include <vector>
 
 // Custom file source is implemented, but not required for core rendering
 // paths used here. We avoid constructing it eagerly to reduce startup
@@ -73,6 +76,19 @@ public:
     void setStyleUrl(const std::string& url);
     void fly_to(const std::string& location);
     void fly_to(double lat, double lon, double zoom);
+
+    // Features of the already-rendered frame under a screen point.
+    //
+    // Answers "what is the user pointing at", which is the question behind
+    // hover tooltips, click inspectors, POI selection and feature
+    // identification. Synchronous and CPU-side: it reads the frame that has
+    // already been rendered rather than drawing anything.
+    //
+    // Empty options mean every layer; narrow with
+    // RenderedQueryOptions::layerIDs and ::filter. The result is empty, not an
+    // error, when nothing has been rendered yet or nothing is under the point.
+    std::vector<mbgl::Feature> query_rendered_features(
+        float x, float y, const mbgl::RenderedQueryOptions& options = {}) const;
 
     // Manually drive the map's run loop
     void run_map_loop();

@@ -69,7 +69,7 @@ cmake --build build
 If you specifically want to compare against the Metal path:
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode .
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_WEBGPU=OFF -G Xcode .
 cmake --build build
 ```
 

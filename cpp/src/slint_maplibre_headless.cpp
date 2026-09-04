@@ -6,6 +6,7 @@
 #include <memory>
 
 #include "host_gl_context_guard.hpp"
+#include "mbgl/actor/scheduler.hpp"
 #include "mbgl/gfx/backend_scope.hpp"
 #include "mbgl/map/bound_options.hpp"
 #include "mbgl/map/camera.hpp"
@@ -53,16 +54,21 @@ void SlintMapLibre::initialize(int w, int h) {
     std::cout << "[SlintMapLibre] initialize(" << w << "," << h << ")"
               << std::endl;
 
-    // Initialize RunLoop.
-    // On macOS with Metal/OpenGL, winit manages the CFRunLoop so we skip
-    // creation. With WebGPU (libuv), we always need our own RunLoop.
-#if defined(__APPLE__) && !defined(MLN_WITH_WEBGPU)
-    // macOS Metal/OpenGL: rely on winit's CFRunLoop
-#else
-    if (!run_loop) {
+    // Make sure this thread has a RunLoop, on every platform including macOS.
+    //
+    // MapLibre delivers file-source responses and style callbacks by posting
+    // them to the mbgl::util::RunLoop of the thread that issued the request,
+    // and run_map_loop() is what drains that queue. Without one the style load
+    // never completes and render_map() keeps returning an empty image, i.e. a
+    // black map. The host toolkit's own event loop does not drain mbgl's
+    // queue, so it is no substitute.
+    //
+    // A RunLoop installs itself as the thread's current scheduler and only one
+    // may exist per thread, so adopt an existing one when several maps share a
+    // thread; the first map to initialize owns it for all of them.
+    if (!run_loop && !mbgl::Scheduler::GetCurrent(false)) {
         run_loop = std::make_unique<mbgl::util::RunLoop>();
     }
-#endif
 
     // Create HeadlessFrontend with the exact same parameters as mbgl-render
     frontend = std::make_unique<mbgl::HeadlessFrontend>(
@@ -387,8 +393,10 @@ void SlintMapLibre::run_map_loop() {
     // a frame through the backend.
     mbgl_slint::HostGLContextGuard gl_context_guard;
 
-    if (run_loop) {
-        run_loop->runOnce();
+    // Pump whichever RunLoop this thread has, not just one we own: when
+    // several maps share a thread only the first of them owns it.
+    if (mbgl::Scheduler::GetCurrent(false)) {
+        mbgl::util::RunLoop::Get()->runOnce();
     } else {
         // Not initialized yet; nothing to pump.
     }

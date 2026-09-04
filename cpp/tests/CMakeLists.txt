@@ -40,5 +40,13 @@ if(NOT WIN32 AND NOT APPLE)
     endif()
 endif()
 
-# Add test targets
-add_test(NAME unit-tests COMMAND unit-tests)
+# Register every case as its own ctest entry rather than the whole binary as
+# one. Cases that call GTEST_SKIP() are otherwise invisible: ctest reports the
+# single entry as passed, and --output-on-failure prints nothing on success, so
+# a run where every EGL guard case skipped for want of a display looks exactly
+# like a run where they all executed.
+#
+# PRE_TEST discovery defers enumerating the cases to test time, so the binary
+# is never executed during the build, where there is no display for it.
+include(GoogleTest)
+gtest_discover_tests(unit-tests DISCOVERY_MODE PRE_TEST)

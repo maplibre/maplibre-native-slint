@@ -97,7 +97,11 @@ public:
 private:
     // Declaration order matters for destruction order (bottom-up).
     // The observer must outlive the frontend.
-    std::unique_ptr<mbgl::util::RunLoop> run_loop;  // created in initialize()
+    // Shared, not owned outright: several maps can share a thread and mbgl
+    // allows only one RunLoop per thread, so the loop has to outlive whichever
+    // map happened to create it. Null when the thread's RunLoop belongs to
+    // someone else. See acquire_thread_run_loop().
+    std::shared_ptr<mbgl::util::RunLoop> run_loop;  // acquired in initialize()
     std::function<void()> m_renderCallback;
 
     // Observer and frontend must be declared before the map.

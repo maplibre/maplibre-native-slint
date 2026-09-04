@@ -15,6 +15,36 @@
 #include "mbgl/util/logging.hpp"
 #include "mbgl/util/premultiply.hpp"
 
+namespace {
+
+// Hand back the RunLoop this thread should use, creating one on first use.
+//
+// mbgl allows a single RunLoop per thread and installs it as the thread's
+// current scheduler, while several SlintMapLibre instances can share the UI
+// thread. Ownership is therefore shared: with a plain member, destroying the
+// first map cleared the thread's scheduler out from under the others and
+// silently stopped their run_map_loop() from pumping anything.
+//
+// Returns null when the thread already has a scheduler we did not create: that
+// loop belongs to someone else, and run_map_loop() pumps whatever is current
+// rather than a loop we own.
+std::shared_ptr<mbgl::util::RunLoop> acquire_thread_run_loop() {
+    static thread_local std::weak_ptr<mbgl::util::RunLoop> weak_run_loop;
+
+    if (auto existing = weak_run_loop.lock()) {
+        return existing;
+    }
+    if (mbgl::Scheduler::GetCurrent(false)) {
+        return nullptr;
+    }
+
+    auto run_loop = std::make_shared<mbgl::util::RunLoop>();
+    weak_run_loop = run_loop;
+    return run_loop;
+}
+
+}  // namespace
+
 SlintMapLibre::SlintMapLibre() {
     // Defer RunLoop creation until initialize() when we know sizes and
     // the UI is set up. This reduces the chance of early event-loop
@@ -63,11 +93,10 @@ void SlintMapLibre::initialize(int w, int h) {
     // black map. The host toolkit's own event loop does not drain mbgl's
     // queue, so it is no substitute.
     //
-    // A RunLoop installs itself as the thread's current scheduler and only one
-    // may exist per thread, so adopt an existing one when several maps share a
-    // thread; the first map to initialize owns it for all of them.
-    if (!run_loop && !mbgl::Scheduler::GetCurrent(false)) {
-        run_loop = std::make_unique<mbgl::util::RunLoop>();
+    // Only one RunLoop may exist per thread, so maps that share a thread share
+    // the loop and the last of them to be destroyed releases it.
+    if (!run_loop) {
+        run_loop = acquire_thread_run_loop();
     }
 
     // Create HeadlessFrontend with the exact same parameters as mbgl-render

@@ -15,8 +15,8 @@ The important thing here is not packaging polish. The important thing is that th
 ## What This Repository Is Not
 
 - Not yet a polished end-user SDK
-- Not yet an installable, versioned package (no `find_package` / system install yet) — you consume it via `FetchContent` / `add_subdirectory`, see [Use It In Your Own App](#use-it-in-your-own-app)
-- Not a "everything is magically wired for you" drop-in — you still write the small `MMapAdapter` wiring in your own `main` (see [`cpp/main.cpp`](cpp/main.cpp))
+- Not yet an installable, versioned package (no `find_package` / system install yet). You consume it via `FetchContent` / `add_subdirectory`, see [Use It In Your Own App](#use-it-in-your-own-app)
+- Not a "everything is magically wired for you" drop-in. You still write the small `MMapAdapter` wiring in your own `main` (see [`cpp/main.cpp`](cpp/main.cpp))
 
 Today, the most honest way to describe this repository is:
 
@@ -94,7 +94,7 @@ What still needs to be provided by the host application is the native backend wi
 
 ## Use It In Your Own App
 
-The repository is consumable directly from another CMake project — no system install needed. Fetch it and link the reusable backend target `maplibre-native-slint::mbgl-slint`, which publicly propagates MapLibre Native, Slint, cpr, the GL/WebGPU libraries, and the backend headers:
+The repository is consumable directly from another CMake project, with no system install needed. Fetch it and link the reusable backend target `maplibre-native-slint::mbgl-slint`, which publicly propagates MapLibre Native, Slint, cpr, the GL/WebGPU libraries, and the backend headers:
 
 ```cmake
 include(FetchContent)
@@ -121,7 +121,7 @@ instance (from `slint_maplibre_headless.hpp`, provided by the target). Copy
 ### Backend selection
 
 The default build uses WebGPU (`wgpu-native`). To use OpenGL instead, disable
-WebGPU **and** select a backend explicitly — a bare `-DMLN_WITH_WEBGPU=OFF`
+WebGPU **and** select a backend explicitly. A bare `-DMLN_WITH_WEBGPU=OFF`
 fails fast with a message telling you to pick one:
 
 ```bash
@@ -167,8 +167,8 @@ cmake -B build \
 
 ### Experimental backend
 
-- [`rust/main.slint`](rust/main.slint) mirrors the same Slint component contract as the C++ demo
-- [`rust/src/maplibre.rs`](rust/src/maplibre.rs) wires `MMapAdapter` to `maplibre-native-rs`
+- [`experiments/rust/main.slint`](experiments/rust/main.slint) mirrors the same Slint component contract as the C++ demo
+- [`experiments/rust/src/maplibre.rs`](experiments/rust/src/maplibre.rs) wires `MMapAdapter` to `maplibre-native-rs`
 - This path is useful for experimentation on Linux, but it is not the repository's primary story today
 
 ## Platform Status
@@ -231,7 +231,9 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_WEBGPU=OFF -DMLN_WITH_OPENG
 
 - [`src/`](src/) - reusable Slint component API
 - [`cpp/`](cpp/) - canonical C++ backend integration and demo app
-- [`rust/`](rust/) - Linux-oriented experimental Rust backend integration
+- [`experiments/`](experiments/) - experiments, not part of the supported path:
+  - [`experiments/rust/`](experiments/rust/) - Linux-oriented experimental Rust backend integration
+  - [`experiments/ffi/`](experiments/ffi/) - exploration of the experimental C API from `maplibre-native-ffi`
 - [`vendor/`](vendor/) - MapLibre Native and other vendored dependencies
 - [`docs/build_guides/`](docs/build_guides/) - platform-specific build guides
 - [`docs/testing.md`](docs/testing.md) - testing instructions

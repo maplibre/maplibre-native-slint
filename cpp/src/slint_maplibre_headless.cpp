@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 
+#include "host_gl_context_guard.hpp"
+#include "mbgl/actor/scheduler.hpp"
 #include "mbgl/gfx/backend_scope.hpp"
 #include "mbgl/map/bound_options.hpp"
 #include "mbgl/map/camera.hpp"
@@ -13,6 +15,36 @@
 #include "mbgl/util/logging.hpp"
 #include "mbgl/util/premultiply.hpp"
 
+namespace {
+
+// Hand back the RunLoop this thread should use, creating one on first use.
+//
+// mbgl allows a single RunLoop per thread and installs it as the thread's
+// current scheduler, while several SlintMapLibre instances can share the UI
+// thread. Ownership is therefore shared: with a plain member, destroying the
+// first map cleared the thread's scheduler out from under the others and
+// silently stopped their run_map_loop() from pumping anything.
+//
+// Returns null when the thread already has a scheduler we did not create: that
+// loop belongs to someone else, and run_map_loop() pumps whatever is current
+// rather than a loop we own.
+std::shared_ptr<mbgl::util::RunLoop> acquire_thread_run_loop() {
+    static thread_local std::weak_ptr<mbgl::util::RunLoop> weak_run_loop;
+
+    if (auto existing = weak_run_loop.lock()) {
+        return existing;
+    }
+    if (mbgl::Scheduler::GetCurrent(false)) {
+        return nullptr;
+    }
+
+    auto run_loop = std::make_shared<mbgl::util::RunLoop>();
+    weak_run_loop = run_loop;
+    return run_loop;
+}
+
+}  // namespace
+
 SlintMapLibre::SlintMapLibre() {
     // Defer RunLoop creation until initialize() when we know sizes and
     // the UI is set up. This reduces the chance of early event-loop
@@ -20,6 +52,10 @@ SlintMapLibre::SlintMapLibre() {
 }
 
 SlintMapLibre::~SlintMapLibre() {
+    // Tearing down the WebGPU device re-enters wgpu, so keep the host
+    // toolkit's GL context pinned across it.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     // Orderly shutdown: first, unregister the observer to prevent dangling
     // references.
     if (frontend) {
@@ -27,27 +63,41 @@ SlintMapLibre::~SlintMapLibre() {
     }
     // Next, destroy the map explicitly.
     map.reset();
-    // Finally, the rest of the members (frontend, observer, etc.) will be
-    // destroyed automatically by their unique_ptrs in the correct order.
+    // Then the frontend, which owns the backend: as a member it would
+    // otherwise be destroyed after this body, putting the WebGPU teardown
+    // outside the guard above. The observers are declared before it and so
+    // are still alive here, which is the ordering the members rely on.
+    frontend.reset();
+    // Finally, the rest of the members (observer, run loop) will be destroyed
+    // automatically by their unique_ptrs in the correct order.
 }
 
 void SlintMapLibre::initialize(int w, int h) {
+    // Slint calls this from a layout/draw pass, and creating the MapLibre
+    // backend below makes wgpu enumerate its GLES adapter, which unbinds the
+    // renderer's GL context. See HostGLContextGuard.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     width = w;
     height = h;
 
     std::cout << "[SlintMapLibre] initialize(" << w << "," << h << ")"
               << std::endl;
 
-    // Initialize RunLoop.
-    // On macOS with Metal/OpenGL, winit manages the CFRunLoop so we skip
-    // creation. With WebGPU (libuv), we always need our own RunLoop.
-#if defined(__APPLE__) && !defined(MLN_WITH_WEBGPU)
-    // macOS Metal/OpenGL: rely on winit's CFRunLoop
-#else
+    // Make sure this thread has a RunLoop, on every platform including macOS.
+    //
+    // MapLibre delivers file-source responses and style callbacks by posting
+    // them to the mbgl::util::RunLoop of the thread that issued the request,
+    // and run_map_loop() is what drains that queue. Without one the style load
+    // never completes and render_map() keeps returning an empty image, i.e. a
+    // black map. The host toolkit's own event loop does not drain mbgl's
+    // queue, so it is no substitute.
+    //
+    // Only one RunLoop may exist per thread, so maps that share a thread share
+    // the loop and the last of them to be destroyed releases it.
     if (!run_loop) {
-        run_loop = std::make_unique<mbgl::util::RunLoop>();
+        run_loop = acquire_thread_run_loop();
     }
-#endif
 
     // Create HeadlessFrontend with the exact same parameters as mbgl-render
     frontend = std::make_unique<mbgl::HeadlessFrontend>(
@@ -180,6 +230,8 @@ void SlintMapLibre::setStyleUrl(const std::string& url) {
 }
 
 slint::Image SlintMapLibre::render_map() {
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     std::cout << "render_map() called" << std::endl;
 
     if (!map || !frontend) {
@@ -265,6 +317,8 @@ slint::Image SlintMapLibre::render_map() {
 }
 
 void SlintMapLibre::resize(int w, int h) {
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
     width = w;
     height = h;
 
@@ -364,8 +418,14 @@ void SlintMapLibre::set_bearing(float bearing_value) {
 }
 
 void SlintMapLibre::run_map_loop() {
-    if (run_loop) {
-        run_loop->runOnce();
+    // Pumping the run loop drains MapLibre's async invalidate, which renders
+    // a frame through the backend.
+    mbgl_slint::HostGLContextGuard gl_context_guard;
+
+    // Pump whichever RunLoop this thread has, not just one we own: when
+    // several maps share a thread only the first of them owns it.
+    if (mbgl::Scheduler::GetCurrent(false)) {
+        mbgl::util::RunLoop::Get()->runOnce();
     } else {
         // Not initialized yet; nothing to pump.
     }

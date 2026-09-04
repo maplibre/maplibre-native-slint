@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+#include "mbgl/actor/scheduler.hpp"
 #include "slint_maplibre_headless.hpp"
 
 class IntegrationTest : public ::testing::Test {
@@ -45,6 +46,26 @@ TEST_F(IntegrationTest, MultipleComponentsLifecycle) {
 
     // Clean up in order
     map1.reset();
+    map2.reset();
+}
+
+// Maps sharing a thread share its RunLoop, so destroying whichever one
+// happened to create it must not strand the others: mbgl posts style and
+// file-source callbacks to the thread's scheduler, and run_map_loop() drains
+// them. Losing it here is the black-map failure with no crash to point at.
+TEST_F(IntegrationTest, SurvivingMapKeepsTheThreadRunLoop) {
+    auto map1 = std::make_unique<SlintMapLibre>();
+    map1->initialize(640, 480);
+
+    auto map2 = std::make_unique<SlintMapLibre>();
+    map2->initialize(1024, 768);
+    ASSERT_NE(mbgl::Scheduler::GetCurrent(false), nullptr);
+
+    map1.reset();
+    EXPECT_NE(mbgl::Scheduler::GetCurrent(false), nullptr)
+        << "destroying the first map took the thread's RunLoop with it";
+    EXPECT_NO_THROW(map2->run_map_loop());
+
     map2.reset();
 }
 

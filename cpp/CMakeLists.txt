@@ -10,6 +10,7 @@
 #
 add_library(mbgl-slint STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/slint_maplibre_headless.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/host_gl_context_guard.cpp
 )
 add_library(maplibre-native-slint::mbgl-slint ALIAS mbgl-slint)
 
@@ -24,6 +25,10 @@ target_link_libraries(mbgl-slint PUBLIC
     mbgl-core
     cpr::cpr
 )
+
+# HostGLContextGuard resolves EGL/GLX entry points through dlopen/dlsym so it
+# adds no link-time dependency on a GL stack that may not be in use.
+target_link_libraries(mbgl-slint PRIVATE ${CMAKE_DL_LIBS})
 
 if(MLN_WITH_WEBGPU)
     target_compile_definitions(mbgl-slint PUBLIC MLN_WITH_WEBGPU)

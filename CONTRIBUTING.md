@@ -19,6 +19,8 @@ We welcome contributions to MapLibre Native Slint! Here are some guidelines to f
 
 Please follow the existing code style and conventions. Make sure to update the documentation if you introduce new features or change existing behavior.
 
+If you use AI assistance, follow the [AI policy](./AI_POLICY.md).
+
 ## No Mapbox Backports
 
 A critical rule is to not backport code from Mapbox projects that was contributed under their new proprietary license. This is to avoid copyright infringement and is considered a significant threat to the MapLibre project. If you have any doubts, it is best to ask for clarification.

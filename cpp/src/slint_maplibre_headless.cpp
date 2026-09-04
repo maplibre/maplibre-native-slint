@@ -32,8 +32,13 @@ SlintMapLibre::~SlintMapLibre() {
     }
     // Next, destroy the map explicitly.
     map.reset();
-    // Finally, the rest of the members (frontend, observer, etc.) will be
-    // destroyed automatically by their unique_ptrs in the correct order.
+    // Then the frontend, which owns the backend: as a member it would
+    // otherwise be destroyed after this body, putting the WebGPU teardown
+    // outside the guard above. The observers are declared before it and so
+    // are still alive here, which is the ordering the members rely on.
+    frontend.reset();
+    // Finally, the rest of the members (observer, run loop) will be destroyed
+    // automatically by their unique_ptrs in the correct order.
 }
 
 void SlintMapLibre::initialize(int w, int h) {

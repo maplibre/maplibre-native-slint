@@ -17,6 +17,19 @@ namespace mbgl_slint {
 // churn invisible to the host toolkit. The guard is a no-op when no GL context
 // is current, when the context survived the call unchanged, or when the
 // process has no EGL/GLX/WGL loaded at all.
+//
+// Platform coverage:
+//   * Linux and other Unices: EGL and GLX.
+//   * Windows: WGL.
+//   * Apple platforms: nothing. A default wgpu-native build there has no GLES
+//     backend to probe, so there is no context to lose; CGL and EAGL are
+//     deliberately not covered.
+//
+// The entry points are resolved from libraries the process has *already*
+// loaded, so the guard adds no link-time dependency on a GL stack that is not
+// in use. A failed lookup is never cached: a consumer of this library that
+// constructs a guard before its toolkit has brought up a window (and with it
+// EGL) still gets a working guard once the window exists.
 class HostGLContextGuard {
 public:
     HostGLContextGuard();

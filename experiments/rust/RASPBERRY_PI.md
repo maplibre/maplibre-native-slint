@@ -4,11 +4,10 @@ This guide describes how to run the Rust demo on a Raspberry Pi (or any
 console-only Linux box with no X11/Wayland), rendering directly to a
 DRM/KMS display such as a small SPI/HDMI LCD.
 
-This is the **software GL** path. It is not the only one available on a Pi:
-the C++ zero-copy GL backend renders on the Pi 4's V3D GPU over HDMI, and
-[`cpp/README.md`](../cpp/README.md#raspberry-pi-notes) documents that setup.
-Which one applies is decided by the display output path, not by the board
-(see below).
+This is the **software GL** path, and it is not the only one available on a Pi.
+What decides which one applies is the display output path rather than the board;
+[`docs/rendering-paths.md`](../../docs/rendering-paths.md#what-the-display-output-decides)
+covers that, and the hardware alternative it points to.
 
 Verified on:
 
@@ -27,30 +26,14 @@ Verified on:
   **linuxkms** backend (the `-noseat` variant, which does not depend on
   `libseat`/logind).
 
-### Software GL is a property of this configuration, not of the board
-
-It is tempting to read the above as "the Pi's GPU cannot run
-maplibre-native". It cannot, in this configuration. It can in another:
-
-| Display output path | GL context | Result |
-|---|---|---|
-| SPI panel, or any panel with no KMS GL path | own context, `EGL_PLATFORM=surfaceless` | software GL (llvmpipe), pixels read back |
-| HDMI on `vc4-kms-v3d`, via GBM/DRM | context borrowed from Slint's linuxkms backend | **V3D hardware GL**, composited zero-copy |
-
-The second row is the C++ zero-copy backend, verified on a Raspberry Pi 4
-(Debian trixie, aarch64) with an HDMI panel on the console over DRM/KMS;
-see [`cpp/README.md`](../cpp/README.md#raspberry-pi-notes).
-
-So what decides it is whether a KMS/DRM/V3D path to the screen actually
-exists, and whether the GL context comes from it. An SPI panel has no such
-path at all, by hardware design, whatever the SoC. HDMI on a Pi 4 usually
-does, but "HDMI" alone is not the guarantee -- `vc4-kms-v3d` has to be in
-use and the context has to come from that display.
+Software GL here is a property of this configuration, not of the board. The
+comparison with the hardware path, and what actually decides between them, is in
+[`docs/rendering-paths.md`](../../docs/rendering-paths.md#what-the-display-output-decides).
 
 ## Build
 
 ```bash
-cd rust
+cd experiments/rust
 cargo build --release --features linuxkms-noseat
 ```
 

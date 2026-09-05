@@ -2,6 +2,8 @@
 
 This repository is a working reference for using [MapLibre Native](https://github.com/maplibre/maplibre-native) inside [Slint](https://slint.dev/) applications.
 
+Its scope is running the two together from C++, and there are two ways to do that. The default renders on WebGPU and works on Linux, macOS and Windows. Where OpenGL is available, a second path hands Slint a borrowed GL texture instead, with no copy through host memory. Which one you can use is decided by what Slint accepts, described in [docs/rendering-paths.md](docs/rendering-paths.md). If you need a combination outside those two, reach for [maplibre-native-rs](https://github.com/maplibre/maplibre-native-rs) directly rather than bending this one.
+
 The important thing here is not packaging polish. The important thing is that the combination actually works today across desktop platforms, with a reusable Slint component surface in [`src/`](src/).
 
 ## Supported Path and Experiments
@@ -15,6 +17,8 @@ Everything under [`experiments/`](experiments/) is an experiment. It is not supp
 
 - [`experiments/rust/`](experiments/rust/) reaches MapLibre through `maplibre-native-rs`. It is not a way to build this without C++: the crate builds MapLibre Native from source underneath.
 - [`experiments/ffi/`](experiments/ffi/) explores the experimental C API from `maplibre-native-ffi`.
+
+Use the path this repository supports rather than assembling your own beside it. In particular, do not stand up a GL or EGL context of your own next to the one Slint's renderer owns.
 
 Contributors and coding agents should also read [AGENTS.md](AGENTS.md) and [AI_POLICY.md](AI_POLICY.md).
 
@@ -185,61 +189,17 @@ cmake -B build \
 - [`experiments/rust/src/maplibre.rs`](experiments/rust/src/maplibre.rs) wires `MMapAdapter` to `maplibre-native-rs`
 - This path is useful for experimentation on Linux, but it is not the repository's primary story today
 
-## Platform Status
+## Rendering Paths
 
-### Reusable Slint component + C++ backend
+How a MapLibre frame reaches a Slint surface, which of the two build targets to
+use, what Slint will and will not accept as a texture, the platform status and
+the build backend flags all live in
+[docs/rendering-paths.md](docs/rendering-paths.md).
 
-| Platform | Status | Notes |
-|---|---|---|
-| Linux x86_64 | Good | Regularly exercised; best-supported development path |
-| Windows x64 | Good | Working desktop path |
-| macOS Apple Silicon | Good | Working desktop path |
-
-### Reusable Slint component + Rust backend
-
-| Platform | Status | Notes |
-|---|---|---|
-| Linux x86_64 | Experimental | Tracks `maplibre-native-rs` 0.8.x; best place to validate the Rust path |
-| Windows x64 | Not practical | Blocked by `maplibre-native-rs` maturity |
-| macOS Apple Silicon | Not practical | Blocked by `maplibre-native-rs` maturity |
-
-This is why the C++ backend remains the canonical reference implementation in this repository.
-
-## Rendering Pipeline
-
-The current implementation uses a GPU-to-CPU readback pipeline:
-
-1. MapLibre Native renders into its headless frontend using the selected backend
-2. The rendered frame is read back into CPU memory as `mbgl::PremultipliedImage`
-3. Pixels are copied into a `slint::SharedPixelBuffer`
-4. `MMapAdapter.frame` is updated
-5. `MMapView` displays that frame and forwards interactions back to the backend
-
-This is not the final ideal architecture, but it is robust and cross-platform enough to serve as a practical reference.
-
-## Build Backends
-
-Current desktop backend preferences:
-
-- Linux: WebGPU (`wgpu-native`) by default
-- Windows: WebGPU (`wgpu-native`) by default
-- macOS: WebGPU (`wgpu-native`) by default, with Metal still useful as a comparison/fallback path
-
-Examples:
-
-```bash
-# Default desktop build
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-# Explicit WebGPU / wgpu-native
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_WEBGPU=ON -DMLN_WEBGPU_IMPL_WGPU=ON
-
-# macOS Metal fallback / comparison
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_METAL=ON -DMLN_WITH_OPENGL=OFF -G Xcode
-
-# Explicit OpenGL fallback
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DMLN_WITH_WEBGPU=OFF -DMLN_WITH_OPENGL=ON
-```
+The short version: Slint accepts a borrowed texture only from OpenGL, so the
+OpenGL path can hand its frame over directly while the WebGPU default copies
+through host memory. That is a property of the toolkit, not a shortcut taken
+here.
 
 ## Project Structure
 

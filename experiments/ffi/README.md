@@ -83,21 +83,38 @@ for a map.
 
 ## Where it is stuck
 
-The big one is that this does not coexist with Slint's GL renderer.
+It does not coexist with Slint's default GL renderer. `mln_opengl_owned_texture_attach()`
+returns `MLN_STATUS_NATIVE_ERROR` once the Slint window exists, though the same call
+succeeds before it. Narrowing that down turned up something more specific: after Slint's
+renderer initialises, `eglMakeCurrent` fails even on an EGL context created fresh
+afterwards.
 
-- With `SLINT_BACKEND=winit-software` everything works. In that configuration
-  no EGL context is ever current on the thread, so there is nothing to collide
-  with.
-- With the default femtovg renderer, `mln_opengl_owned_texture_attach()`
-  returns `MLN_STATUS_NATIVE_ERROR`. The same call succeeds before the Slint
-  window is created, so the trigger is Slint's renderer initialising. While
-  narrowing that down it also turned out that once Slint is up, `eglMakeCurrent`
-  fails even on an EGL context created fresh afterwards.
+That is not particular to this experiment. The same shape has now been hit three times
+in this ecosystem:
 
-The example currently creates a separate EGL context for MapLibre and passes it
-as the share context, which is almost certainly the wrong shape. It should
-either share the context Slint already owns, or let Slint own the texture and
-use `mln_opengl_borrowed_texture_attach()`. That is the next thing to try.
+- here, with an EGL context of our own beside Slint's femtovg renderer
+- in `experiments/rust`, where maplibre-native-rs 0.9 moved its Linux OpenGL default from
+  GLX to EGL and the example began aborting with `EGL_BAD_ACCESS`
+- in a downstream appliance, where a headless EGL initialisation met Slint's hardware GL
+  through GBM and segfaulted
+
+What the three share is a UI toolkit renderer already holding a GL stack while something
+else initialises its own. Every reproduction so far has been on real GPU drivers, NVIDIA
+and V3D. On CI, where Mesa's llvmpipe serves both, the same code does not reproduce it,
+so this reads as a driver-level conflict rather than a rule of EGL.
+
+What this means for the experiment is that an owned texture is the wrong target.
+Reading pixels back into host memory is what the supported C++ path already does
+through `HeadlessFrontend`, so an FFI that also reads them back is a second way
+to do the same thing.
+
+That leaves the borrowed texture, which is a deliberate reimplementation of what
+`maplibre-slint-gl` already does, and worth attempting for one reason: the
+prebuilt artifact removes the maplibre-native build entirely. A 14 MB shared
+library against a full C++ source build is a different proposition for anyone
+packaging this, even for an identical rendering path. Whether that holds up is
+the open question. See [docs/rendering-paths.md](../../docs/rendering-paths.md)
+for why the borrowed texture is the only shape Slint will accept.
 
 ## Things worth knowing
 
@@ -125,7 +142,9 @@ use `mln_opengl_borrowed_texture_attach()`. That is the next thing to try.
 
 ## Next
 
-1. Coexist with Slint's GL renderer, by sharing its context or rendering into a
-   texture it owns.
-2. Follow window resizes, and connect mouse pan and wheel zoom.
-3. With those done, `cpp/`, `experiments/rust/` and `experiments/ffi/` can be compared side by side.
+`mln_opengl_borrowed_texture_attach()`, letting Slint own the texture and having
+MapLibre render into it. That is the same shape `maplibre-slint-gl` uses, reached
+without building maplibre-native, which is the whole point of trying it here.
+
+If the prebuilt cannot be made to work against a context Slint owns, this
+experiment has answered its question and can be deleted.

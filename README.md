@@ -201,6 +201,12 @@ OpenGL path can hand its frame over directly while the WebGPU default copies
 through host memory. That is a property of the toolkit, not a shortcut taken
 here.
 
+## Offline Assets
+
+Styles, tiles, PMTiles archives and glyphs can all be served straight from disk
+with `file://`, with no local HTTP server in front of them. See
+[docs/offline-assets.md](docs/offline-assets.md).
+
 ## Project Structure
 
 - [`src/`](src/) - reusable Slint component API

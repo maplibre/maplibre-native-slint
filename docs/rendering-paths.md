@@ -60,6 +60,38 @@ already true. If you need a combination neither offers, use
 [maplibre-native-rs](https://github.com/maplibre/maplibre-native-rs) directly
 rather than bending this repository around it.
 
+## What the display output decides
+
+Slint's constraint above says what a frame has to be. A second constraint, on
+the device, says whether a GL context worth handing over exists at all -- and it
+is not the SoC that decides it.
+
+The temptation on a Raspberry Pi is to conclude that the GPU cannot run
+maplibre-native, because the software-GL setup is the one most people meet
+first. It cannot in that configuration. It can in another:
+
+| Display output path | GL context | Result |
+|---|---|---|
+| SPI panel, or any panel with no KMS GL path | its own, on `EGL_PLATFORM=surfaceless` | software GL (llvmpipe), pixels read back |
+| HDMI on `vc4-kms-v3d`, through GBM/DRM | borrowed from Slint's linuxkms backend | V3D hardware GL, handed over with no copy |
+
+The difference is where the context comes from. A backend that creates its own
+context on the surfaceless platform has no hardware display to bind it to, so
+Mesa's software rasterizer is the only thing left. A backend that borrows the
+context Slint's linuxkms backend already made through GBM/DRM gets the GPU
+behind that display.
+
+Neither direction generalises. An SPI panel has no KMS GL path at all, by
+hardware design, whatever the SoC. HDMI on a Pi 4 usually does, but "HDMI" on
+its own is not the guarantee: `vc4-kms-v3d` has to be in use, and the context
+has to come from that display.
+
+`maplibre-slint-gl` is the second row, verified on a Raspberry Pi 4 (Debian
+trixie, aarch64) with an HDMI panel on the console over DRM/KMS; see
+[`cpp/README.md`](../cpp/README.md#raspberry-pi-notes). The first row is what
+[`experiments/rust/RASPBERRY_PI.md`](../experiments/rust/RASPBERRY_PI.md)
+describes.
+
 ## Platform status
 
 Reusable Slint component with the C++ backend:

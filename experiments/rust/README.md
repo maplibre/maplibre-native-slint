@@ -91,11 +91,13 @@ experiments/rust/
 
 ## Dependencies
 
-- `slint = "1.16"` - UI framework
-- `maplibre_native = "0.8.2"` - Map rendering engine
-- `slint-build = "1.16"` - Build-time dependency for Slint compilation
+See [`Cargo.toml`](Cargo.toml). It carries the versions and, more importantly,
+the render backend feature, which differs per platform.
 
-The current Linux development path builds `maplibre-native` from source through `maplibre-native-rs`, defaults to the OpenGL backend, and can take a while on the first build.
+`maplibre-native-rs` builds `maplibre-native` from source, so the first build
+takes as long as the C++ path does. On Linux it is built with the crate's `glx`
+feature rather than its `opengl` default, for the reason given under
+Prerequisites above.
 
 Renderer integration tests are opt-in so headless CI can run `cargo test` safely. To exercise the real renderer locally, run:
 

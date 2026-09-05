@@ -21,6 +21,9 @@ This implementation is based on the excellent work from [slintmaplibretest](http
 - CMake (required for building MapLibre Native)
 - C++ compiler (required for building MapLibre Native)
 - OpenGL or Metal development libraries (platform-dependent)
+- X11 on Linux. The crate is built with its `glx` feature there, which
+  selects GLX through X11. The crate's own default is EGL, which does not
+  coexist with the GLX stack Slint's renderer loads on Linux.
 
 ## Building
 

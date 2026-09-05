@@ -15,10 +15,10 @@ linuxkms-noseat = ["slint/backend-linuxkms-noseat"]
 slint = "1.16"
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-maplibre_native = { version = "0.8.2", features = ["opengl"] }
+maplibre_native = { version = "0.9.1", features = ["glx"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-maplibre_native = { version = "0.8.2", features = ["metal"] }
+maplibre_native = { version = "0.9.1", features = ["metal"] }
 
 [build-dependencies]
 slint-build = "1.16"

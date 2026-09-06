@@ -70,12 +70,16 @@ backend, driving `SlintMapLibre` directly:
   loading and nothing renders at all, which is how the working runs were
   confirmed to be reading glyphs from disk rather than falling back to a
   network copy.
+- A style declaring `sprite` under `file://`: the style loads and
+  `sprite.json` and `sprite.png` are both opened, traced with
+  `strace -e trace=openat`. The same style with `sprite` removed opens
+  neither, while still reading its glyphs and tiles -- so the two opens follow
+  the declaration rather than something else in the run.
 
-Two gaps worth stating. The default build uses WebGPU rather than OpenGL, and
-this was measured on the OpenGL build; `LocalFileSource` sits in mbgl-core,
-below the render backend, so the result is expected to carry over, but it was
-not measured there. And `sprite` was not exercised, because the style used for
-these runs declares none.
+One gap remains. The default build uses WebGPU rather than OpenGL, and this was
+measured on the OpenGL build; `LocalFileSource` sits in mbgl-core, below the
+render backend, so the result is expected to carry over, but it was not
+measured there.
 
 ## Cache path
 

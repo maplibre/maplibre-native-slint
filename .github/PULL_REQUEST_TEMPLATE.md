@@ -18,4 +18,6 @@
 
 - Tools: <!-- e.g. Claude Code, Codex, Cursor, Gemini CLI -->
 - Context:
-  <!-- how AI was used, and which platform and render backend you actually ran -->
+  <!-- how AI was used, and which platform and render backend you actually ran.
+       If an assistant helped write this description, see
+       .agents/skills/co-write-pr/SKILL.md -->
